@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000">
+  <rect width="800" height="1000" fill="#15212c"/>
+  <circle cx="400" cy="285" r="142" fill="#e5bd93"/>
+  <path d="M240 290c16-142 112-200 216-174 78 19 123 84 118 182-90-70-216-76-334-8z" fill="#202027"/>
+  <path d="M186 900c34-232 142-360 214-360s180 128 214 360H186z" fill="#e8eef6"/>
+  <path d="M290 900l110-260 110 260H290z" fill="#56a8ff"/>
+  <text x="400" y="820" text-anchor="middle" font-family="Arial, sans-serif" font-size="58" font-weight="800" fill="#101418">사진 교체</text>
+</svg>

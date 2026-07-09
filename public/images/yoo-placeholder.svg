@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000">
+  <rect width="800" height="1000" fill="#18212a"/>
+  <circle cx="400" cy="292" r="140" fill="#d9ad82"/>
+  <path d="M256 260c26-116 113-166 214-137 68 20 111 70 121 146-101-48-217-49-335-9z" fill="#151515"/>
+  <rect x="285" y="292" width="90" height="48" rx="20" fill="none" stroke="#101418" stroke-width="16"/>
+  <rect x="425" y="292" width="90" height="48" rx="20" fill="none" stroke="#101418" stroke-width="16"/>
+  <path d="M375 316h50" stroke="#101418" stroke-width="16"/>
+  <path d="M178 900c35-235 145-365 222-365s187 130 222 365H178z" fill="#2f70ff"/>
+  <text x="400" y="820" text-anchor="middle" font-family="Arial, sans-serif" font-size="58" font-weight="800" fill="#fff">사진 교체</text>
+</svg>

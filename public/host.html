@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>인물퀴즈 진행자</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="host">
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">진행자 화면</p>
+          <h1>인물퀴즈</h1>
+        </div>
+        <div id="counter" class="counter">0 / 0</div>
+      </header>
+
+      <section class="stage">
+        <img id="personImage" class="person-image" alt="현재 문제 인물 사진" />
+        <div class="answer-panel">
+          <p class="label">정답</p>
+          <p id="answer" class="answer">준비 중</p>
+        </div>
+      </section>
+
+      <nav class="controls" aria-label="문제 이동">
+        <button id="prevButton" type="button" class="secondary">이전</button>
+        <button id="resetButton" type="button" class="secondary">처음</button>
+        <button id="nextButton" type="button" class="primary">다음 문제</button>
+      </nav>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
