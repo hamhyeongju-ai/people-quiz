@@ -76,6 +76,19 @@ h1 {
   white-space: nowrap;
 }
 
+.status-stack {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+
+.room-label,
+.screen-room {
+  color: #9fb0c3;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .stage {
   align-content: center;
   display: grid;
@@ -173,6 +186,12 @@ h1 {
   bottom: 22px;
   position: fixed;
   right: 22px;
+}
+
+.screen-room {
+  left: 22px;
+  position: fixed;
+  top: 22px;
 }
 
 @media (max-width: 560px) {

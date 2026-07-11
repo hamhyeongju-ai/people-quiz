@@ -6,10 +6,11 @@ const counter = document.querySelector("#counter");
 const nextButton = document.querySelector("#nextButton");
 const prevButton = document.querySelector("#prevButton");
 const resetButton = document.querySelector("#resetButton");
+const roomLabel = document.querySelector("#roomLabel");
 
 const params = new URLSearchParams(window.location.search);
-const room = params.get("room") || localStorage.getItem("quizRoom") || "main";
-localStorage.setItem("quizRoom", room);
+const room = params.get("room") || "family";
+if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
 let people = [];
 let currentIndex = 0;
