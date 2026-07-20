@@ -8,9 +8,11 @@ const hostTitle = document.querySelector("#hostTitle");
 const timerLabel = document.querySelector("#timer");
 const scoreLabel = document.querySelector("#scoreLabel");
 const roomLabel = document.querySelector("#roomLabel");
+const homeButton = document.querySelector("#homeButton");
 
 const params = new URLSearchParams(window.location.search);
 const room = params.get("room") || "family";
+const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
 const APP_VERSION = 4;
@@ -111,6 +113,10 @@ async function saveState(nextState) {
   }
 
   localStorage.setItem(`party-games:${room}`, JSON.stringify(currentState));
+}
+
+async function resetRoom() {
+  await saveState(clone(defaultState));
 }
 
 async function chooseGame(game) {
@@ -807,7 +813,10 @@ async function setupRealtime() {
   roomRef = ref(db, `rooms/${room}`);
 
   const snapshot = await get(roomRef);
-  if (!snapshot.exists()) {
+  if (shouldResetRoom) {
+    currentState = clone(defaultState);
+    await saveState(currentState);
+  } else if (!snapshot.exists()) {
     currentState = clone(defaultState);
     await saveState(currentState);
   }
@@ -826,6 +835,7 @@ async function setupRealtime() {
 }
 
 bindActions(hostRoot || screenRoot);
+if (homeButton) homeButton.addEventListener("click", resetRoom);
 loadPeople()
   .then(setupRealtime)
   .then(() => {
