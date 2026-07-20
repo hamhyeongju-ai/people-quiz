@@ -169,11 +169,19 @@ async function spinRoulette() {
 
   setTimeout(() => {
     saveState({
+      view: "drawResult",
+      category: chosen,
+      rouletteSpinning: false,
+    });
+  }, 2600);
+
+  setTimeout(() => {
+    saveState({
       view: "setup",
       category: chosen,
       rouletteSpinning: false,
     });
-  }, 3000);
+  }, 4200);
 }
 
 async function startRound() {
@@ -332,7 +340,7 @@ function categoryButtons(game, selected) {
     })
     .join("");
 
-  return `${categoryList}<button type="button" class="chip random-chip" data-action="roulette">랜덤 추첨</button>`;
+  return `${categoryList}<button type="button" class="chip random-chip" data-action="roulette">카테고리 랜덤 추첨</button>`;
 }
 
 function renderCategoryDraw(state, includeButton) {
@@ -384,6 +392,17 @@ function renderHost() {
     return;
   }
 
+  if (state.view === "drawResult") {
+    hostRoot.innerHTML = `
+      <section class="draw-result-panel">
+        <p class="label">카테고리 결정</p>
+        <p class="draw-result-word">${state.category}</p>
+        <p class="helper-text">이 카테고리로 게임을 준비합니다.</p>
+      </section>
+    `;
+    return;
+  }
+
   if (state.view === "setup") {
     const game = games[state.game];
     const items = getItems(state.game, state.category);
@@ -392,7 +411,7 @@ function renderHost() {
       <section class="setup-panel">
         <div class="setup-head">
           <button type="button" class="secondary" data-action="menu">← 게임 선택</button>
-          ${button("랜덤 추첨", "primary", "roulette")}
+          ${button("카테고리 랜덤 추첨", "primary", "roulette")}
         </div>
         <p class="label">카테고리</p>
         <div class="chip-row">
@@ -556,6 +575,18 @@ function renderScreen() {
         <p class="eyebrow">${games[state.game].title}</p>
         <h1>카테고리 추첨</h1>
         ${renderCategoryDraw(state, true)}
+      </section>
+    `;
+    return;
+  }
+
+  if (state.view === "drawResult") {
+    screenRoot.innerHTML = `
+      <div class="screen-room">방: ${room}</div>
+      <section class="draw-result-panel screen-draw-result">
+        <p class="eyebrow">카테고리 결정</p>
+        <h1>결정!</h1>
+        <p class="draw-result-word">${state.category}</p>
       </section>
     `;
     return;
