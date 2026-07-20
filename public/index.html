@@ -3,29 +3,30 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>인물퀴즈</title>
+    <title>종합게임패키지</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body class="host">
     <main class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">인물퀴즈</p>
+          <p class="eyebrow">종합게임패키지</p>
           <h1>화면 선택</h1>
         </div>
       </header>
 
-      <section class="answer-panel">
-        <p class="label">아이폰에서 열기</p>
-        <p class="answer small-answer">진행자 화면</p>
-        <a class="link-button primary" href="/host.html?room=family">진행자 화면 열기</a>
+      <section class="game-grid">
+        <a class="game-card" href="/host.html?room=family">
+          <span>진행자 화면</span>
+          <strong>아이폰에서 열기</strong>
+        </a>
+        <a class="game-card" href="/screen.html?room=family">
+          <span>참가자 화면</span>
+          <strong>갤럭시탭에서 열기</strong>
+        </a>
       </section>
 
-      <section class="answer-panel">
-        <p class="label">갤럭시탭에서 열기</p>
-        <p class="answer small-answer">사진 화면</p>
-        <a class="link-button secondary" href="/screen.html?room=family">사진 화면 열기</a>
-      </section>
+      <p class="helper-text">두 기기 모두 같은 방 이름을 사용해야 같이 움직입니다. 기본 방은 family입니다.</p>
     </main>
   </body>
 </html>
