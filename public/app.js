@@ -185,14 +185,14 @@ async function spinRoulette() {
 async function startRound() {
   const { item, usedIds } = getUnusedItem(currentState);
   await saveState({
-    view: "countdown",
+    view: "ready",
     currentItem: item,
     score: 0,
     pass: 0,
     revealAnswer: false,
     feedback: null,
     usedIds,
-    countdownEndAt: Date.now() + 3000,
+    countdownEndAt: null,
     endAt: null,
     relayStartedAt: null,
     relayTotal: Math.max(1, Number(currentState.teamSize || 4) - 1),
@@ -275,6 +275,7 @@ function renderTimer() {
   const remaining = state.endAt ? state.endAt - Date.now() : 0;
   if (timerLabel) {
     if (state.view === "countdown") timerLabel.textContent = Math.max(1, Math.ceil(countdown / 1000));
+    else if (state.view === "ready") timerLabel.textContent = "READY";
     else timerLabel.textContent = state.view === "playing" ? formatTime(remaining) : "--:--";
   }
 
@@ -452,12 +453,22 @@ function renderHost() {
     return;
   }
 
+  if (state.view === "ready") {
+    hostRoot.innerHTML = `
+      <section class="result-panel">
+        <p class="label">문제 준비 완료</p>
+        <p class="helper-text">갤럭시탭에는 READY가 표시됩니다. START를 누르면 타이머가 시작됩니다.</p>
+        <button type="button" class="start-button" data-action="begin">START</button>
+      </section>
+    `;
+    return;
+  }
+
   if (state.view === "countdown") {
     hostRoot.innerHTML = `
       <section class="result-panel">
-        <p class="label">잠시 후 시작</p>
-        <p class="answer">READY</p>
-        <p class="helper-text">갤럭시탭에도 카운트다운이 표시됩니다.</p>
+        <p class="label">시작 카운트다운</p>
+        <p class="answer">${Math.max(1, Math.ceil(((state.countdownEndAt || Date.now()) - Date.now()) / 1000))}</p>
       </section>
     `;
     return;
@@ -471,13 +482,25 @@ function renderHost() {
     return;
   }
 
+  if (state.view === "ready") {
+    screenRoot.innerHTML = `
+      <div class="screen-room">방: ${room}</div>
+      <section class="screen-card">
+        <p class="eyebrow">${games[state.game].title}</p>
+        <h1>READY</h1>
+        <p class="screen-sub">곧 시작합니다</p>
+      </section>
+    `;
+    return;
+  }
+
   if (state.view === "countdown") {
     screenRoot.innerHTML = `
       <div class="screen-room">방: ${room}</div>
       <div id="screenTimer" class="screen-counter"></div>
       <section class="screen-card">
         <p class="eyebrow">${games[state.game].title}</p>
-        <h1>곧 시작합니다</h1>
+        <h1>START</h1>
         <p class="screen-sub">준비하세요</p>
       </section>
     `;
@@ -752,6 +775,7 @@ function bindActions(root) {
     if (action === "menu") return saveState({ ...defaultState, usedIds: currentState?.usedIds || {} });
     if (action === "setup") return saveState({ view: "setup", endAt: null });
     if (action === "start") return startRound();
+    if (action === "begin") return saveState({ view: "countdown", countdownEndAt: Date.now() + 3000 });
     if (action === "reveal") return toggleRevealAnswer();
     if (action === "nextQuestion") return nextQuestion();
     if (action === "correct") return markResult("correct");
