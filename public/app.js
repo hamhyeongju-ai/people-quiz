@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=17";
+import { games, packs } from "./game-data.js?v=18";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,13 +15,14 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 17;
+const APP_VERSION = 18;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
 let people = [];
 let tickTimer = null;
 let quietMeter = null;
+let catchmindSnapshot = null;
 
 const defaultState = {
   appVersion: APP_VERSION,
@@ -37,8 +38,12 @@ const defaultState = {
   endAt: null,
   countdownEndAt: null,
   teamSize: 4,
+  relaySeconds: 5,
   relayStartedAt: null,
   relayTotal: 3,
+  relayPhase: "waiting",
+  relayIndex: 1,
+  relaySegmentEndAt: null,
   usedIds: {},
   rouletteOptions: [],
   rouletteSpinning: false,
@@ -162,6 +167,9 @@ async function chooseGame(game) {
     rouletteOptions: [],
     rouletteSpinning: false,
     relayStartedAt: null,
+    relayPhase: "waiting",
+    relayIndex: 1,
+    relaySegmentEndAt: null,
     quietName: "",
     quietCurrentLevel: 0,
     quietPeakLevel: 0,
@@ -233,6 +241,10 @@ async function startRound() {
     endAt: null,
     relayStartedAt: null,
     relayTotal: Math.max(1, Number(currentState.teamSize || 4) - 1),
+    relaySeconds: Math.max(1, Number(currentState.relaySeconds || 5)),
+    relayPhase: "waiting",
+    relayIndex: 1,
+    relaySegmentEndAt: null,
   });
 }
 
@@ -240,15 +252,18 @@ async function beginPlaying() {
   const now = Date.now();
   const duration = Number(currentState.duration || games[currentState.game].defaultSeconds) * 1000;
   const relayTotal = Math.max(1, Number(currentState.teamSize || 4) - 1);
-  const relayDuration = currentState.game === "catchmind" ? relayTotal * 3000 : 0;
 
   await saveState({
     view: "playing",
     countdownEndAt: null,
     revealAnswer: false,
-    relayStartedAt: currentState.game === "catchmind" ? now : null,
+    relayStartedAt: null,
     relayTotal,
-    endAt: now + relayDuration + duration,
+    relaySeconds: Math.max(1, Number(currentState.relaySeconds || 5)),
+    relayPhase: currentState.game === "catchmind" ? "waiting" : null,
+    relayIndex: 1,
+    relaySegmentEndAt: null,
+    endAt: currentState.game === "catchmind" ? null : now + duration,
   });
 }
 
@@ -434,17 +449,81 @@ async function stopQuietMeter() {
   });
 }
 
+async function finishQuietByHost() {
+  const peak = Number(currentState.quietPeakLevel || 0);
+  const name = currentState.quietName || `도전자 ${(currentState.quietResults || []).length + 1}`;
+  const results = clone(currentState.quietResults || []);
+  results.push({
+    name,
+    peak,
+    at: Date.now(),
+  });
+  await saveState({
+    view: "result",
+    quietResults: results,
+    quietCurrentLevel: 0,
+    quietPeakLevel: peak,
+    quietError: null,
+  });
+}
+
+async function startCatchmindTurn() {
+  if (currentState?.game !== "catchmind" || currentState?.view !== "playing") return;
+  if (currentState.relayPhase === "drawing" || currentState.relayPhase === "guess") return;
+
+  const now = Date.now();
+  const relayTotal = Math.max(1, Number(currentState.relayTotal || Math.max(1, Number(currentState.teamSize || 4) - 1)));
+  const currentIndex = Math.max(1, Number(currentState.relayIndex || 1));
+  const nextIndex = currentState.relayPhase === "locked" ? Math.min(relayTotal, currentIndex + 1) : currentIndex;
+  const seconds = Math.max(1, Number(currentState.relaySeconds || 5));
+
+  await saveState({
+    relayPhase: "drawing",
+    relayIndex: nextIndex,
+    relayStartedAt: now,
+    relaySegmentEndAt: now + seconds * 1000,
+    endAt: null,
+  });
+}
+
+async function finishCatchmindTurn() {
+  if (currentState?.game !== "catchmind" || currentState?.view !== "playing" || currentState.relayPhase !== "drawing") return;
+
+  const relayTotal = Math.max(1, Number(currentState.relayTotal || 3));
+  const currentIndex = Math.max(1, Number(currentState.relayIndex || 1));
+
+  if (currentIndex >= relayTotal) {
+    await saveState({
+      relayPhase: "guess",
+      relaySegmentEndAt: null,
+      endAt: Date.now() + Number(currentState.duration || games.catchmind.defaultSeconds) * 1000,
+    });
+    return;
+  }
+
+  await saveState({
+    relayPhase: "locked",
+    relaySegmentEndAt: null,
+    endAt: null,
+  });
+}
+
 function renderTimer() {
   const state = currentState || defaultState;
-  const remaining = state.endAt ? state.endAt - Date.now() : 0;
+  const catchmindInfo = getCatchmindRelayInfo(state);
+  const remaining = catchmindInfo?.phase === "draw"
+    ? Math.max(0, (state.relaySegmentEndAt || 0) - Date.now())
+    : state.endAt
+      ? state.endAt - Date.now()
+      : 0;
   if (timerLabel) {
     if (state.view === "ready") timerLabel.textContent = "READY";
-    else timerLabel.textContent = state.view === "playing" ? formatTime(remaining) : "--:--";
+    else timerLabel.textContent = state.view === "playing" && (state.endAt || catchmindInfo?.phase === "draw") ? formatTime(remaining) : "--:--";
   }
 
   const screenTimer = document.querySelector("#screenTimer");
   if (screenTimer) {
-    screenTimer.textContent = state.view === "playing" ? formatTime(remaining) : "";
+    screenTimer.textContent = state.view === "playing" && (state.endAt || catchmindInfo?.phase === "draw") ? formatTime(remaining) : "";
   }
   if (scoreLabel) {
     scoreLabel.textContent = state.game === "goldenbell"
@@ -456,34 +535,46 @@ function renderTimer() {
 
   updateCatchmindRelayLabels(state);
 
-  if (isHost && state.view === "playing" && remaining <= 0) finishRound();
+  if (isHost && state.game === "catchmind" && state.view === "playing" && state.relayPhase === "drawing" && remaining <= 0) {
+    finishCatchmindTurn();
+  }
+  if (isHost && state.view === "playing" && state.endAt && remaining <= 0) finishRound();
 }
 
 function getCatchmindRelayInfo(state) {
-  if (state.game !== "catchmind" || state.view !== "playing" || !state.relayStartedAt) return null;
-  const elapsed = Date.now() - state.relayStartedAt;
-  const relayTotal = state.relayTotal || 3;
-  const drawDuration = relayTotal * 3000;
+  if (state.game !== "catchmind" || state.view !== "playing") return null;
+  const relayTotal = Math.max(1, Number(state.relayTotal || 3));
+  const current = Math.max(1, Number(state.relayIndex || 1));
 
-  if (elapsed < drawDuration) {
+  if (state.relayPhase === "drawing") {
     return {
       phase: "draw",
-      current: Math.min(relayTotal, Math.floor(elapsed / 3000) + 1),
+      current: Math.min(relayTotal, current),
       total: relayTotal,
-      seconds: Math.max(1, Math.ceil((3000 - (elapsed % 3000)) / 1000)),
+      seconds: Math.max(0, Math.ceil(((state.relaySegmentEndAt || Date.now()) - Date.now()) / 1000)),
     };
   }
 
-  return { phase: "guess", current: relayTotal, total: relayTotal, seconds: 0 };
+  return {
+    phase: state.relayPhase || "waiting",
+    current: Math.min(relayTotal, current),
+    total: relayTotal,
+    seconds: 0,
+  };
 }
 
 function updateCatchmindRelayLabels(state) {
   const info = getCatchmindRelayInfo(state);
-  const text = !info
-    ? ""
-    : info.phase === "draw"
-      ? `${info.current}번 그림 담당 · ${info.seconds}초`
-      : "이제 맞히는 사람이 정답을 외쳐요";
+  let text = "";
+  if (info?.phase === "draw") {
+    text = `${info.current}번 그림 담당 · ${info.seconds}초`;
+  } else if (info?.phase === "locked") {
+    text = `${info.current}번 그림 완료 · 다음 사람이 START`;
+  } else if (info?.phase === "guess") {
+    text = "그림 완성 · 이제 정답을 맞혀요";
+  } else if (info?.phase === "waiting") {
+    text = "1번 그림 담당 준비 · START를 누르세요";
+  }
 
   document.querySelectorAll("[data-relay-status]").forEach((item) => {
     item.textContent = text;
@@ -669,7 +760,11 @@ function renderHost() {
                 <span>팀원 수</span>
                 <input id="teamSizeInput" type="number" min="2" max="10" step="1" value="${state.teamSize || 4}" />
               </label>
-              <p class="helper-text">한 명은 맞히는 사람, 나머지 ${Math.max(1, Number(state.teamSize || 4) - 1)}명이 3초씩 이어서 그립니다.</p>`
+              <label class="field">
+                <span>1인당 그림 초</span>
+                <input id="relaySecondsInput" type="number" min="1" max="30" step="1" value="${state.relaySeconds || 5}" />
+              </label>
+              <p class="helper-text">한 명은 맞히는 사람, 나머지 ${Math.max(1, Number(state.teamSize || 4) - 1)}명이 ${Math.max(1, Number(state.relaySeconds || 5))}초씩 이어서 그립니다.</p>`
             : ""
         }
         <p class="helper-text">이 카테고리 문제 ${items.length}개 · 이미 사용 ${usedCount}개</p>
@@ -712,7 +807,10 @@ function renderHost() {
           <p class="label">측정 중</p>
           <h1>${escapeHtml(state.quietName || "도전자")}</h1>
           ${renderQuietGauge(state.quietCurrentLevel, state.quietPeakLevel)}
-          <p class="helper-text">갤럭시탭에서 측정 종료를 누르면 기록이 순위표에 저장됩니다.</p>
+          <p class="helper-text">과자를 다 먹은 걸 확인한 뒤 측정 종료를 누르면 기록이 순위표에 저장됩니다.</p>
+          <div class="controls">
+            ${button("측정 종료", "danger", "quietStop")}
+          </div>
         </section>
         <section class="result-panel quiet-panel">
           <h2 class="section-title">현재 순위</h2>
@@ -966,8 +1064,7 @@ function renderScreenItem(game, item) {
         <p class="eyebrow">측정 중</p>
         <h1>${escapeHtml(currentState.quietName || "도전자")}</h1>
         ${renderQuietGauge(currentState.quietCurrentLevel, currentState.quietPeakLevel)}
-        <button type="button" class="danger quiet-stop-button" data-action="quietStop">측정 종료</button>
-        <p class="screen-sub">${currentState.quietError || "다 먹을 때까지 조용히!"}</p>
+        <p class="screen-sub">${currentState.quietError || "진행자가 확인 후 종료합니다."}</p>
       </section>
     `;
   }
@@ -984,12 +1081,29 @@ function renderScreenItem(game, item) {
     `;
   }
   if (game === "catchmind") {
+    const relayInfo = getCatchmindRelayInfo(currentState);
+    const locked = relayInfo?.phase !== "draw";
+    const lockText = relayInfo?.phase === "guess"
+      ? "그림 완성 · 정답 맞히기"
+      : relayInfo?.phase === "locked"
+        ? "다음 그림 담당자 준비"
+        : "1번 그림 담당자 준비";
     return `
       <section class="catchmind-stage">
         <p class="eyebrow">캐치마인드</p>
-        <h1>릴레이 그림</h1>
+        <h1 class="catchmind-prompt">제시어: ${escapeHtml(item.word)}</h1>
         <p class="screen-sub" data-relay-status></p>
-        <canvas id="catchmindCanvas" class="draw-canvas" width="1100" height="620"></canvas>
+        <div class="catchmind-board">
+          <canvas id="catchmindCanvas" class="draw-canvas" width="1100" height="620"></canvas>
+          ${
+            locked
+              ? `<div class="canvas-lock">
+                  <strong>${lockText}</strong>
+                  ${relayInfo?.phase === "guess" ? "" : `<button type="button" class="start-button" data-action="relayStart">START</button>`}
+                </div>`
+              : ""
+          }
+        </div>
         <div class="canvas-tools">
           <button type="button" class="secondary" data-action="clearCanvas">그림 지우기</button>
         </div>
@@ -1009,8 +1123,18 @@ function render() {
     stopQuietMeterStream();
   }
   if (isHost) renderHost();
-  else renderScreen();
+  else {
+    if (currentState?.game === "catchmind" && currentState?.view === "playing") captureCatchmindCanvas();
+    else catchmindSnapshot = null;
+    renderScreen();
+  }
   renderTimer();
+}
+
+function captureCatchmindCanvas() {
+  const canvas = document.querySelector("#catchmindCanvas");
+  if (!canvas) return;
+  catchmindSnapshot = canvas.toDataURL("image/png");
 }
 
 function setupCatchmindCanvas() {
@@ -1023,7 +1147,17 @@ function setupCatchmindCanvas() {
   context.lineWidth = 8;
   context.strokeStyle = "#172033";
 
+  if (catchmindSnapshot) {
+    const image = new Image();
+    image.onload = () => context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    image.src = catchmindSnapshot;
+  }
+
   let drawing = false;
+
+  function canDraw() {
+    return currentState?.game === "catchmind" && currentState?.view === "playing" && currentState?.relayPhase === "drawing";
+  }
 
   function point(event) {
     const rect = canvas.getBoundingClientRect();
@@ -1034,6 +1168,7 @@ function setupCatchmindCanvas() {
   }
 
   canvas.addEventListener("pointerdown", (event) => {
+    if (!canDraw()) return;
     drawing = true;
     canvas.setPointerCapture(event.pointerId);
     const p = point(event);
@@ -1042,7 +1177,7 @@ function setupCatchmindCanvas() {
   });
 
   canvas.addEventListener("pointermove", (event) => {
-    if (!drawing) return;
+    if (!drawing || !canDraw()) return;
     const p = point(event);
     context.lineTo(p.x, p.y);
     context.stroke();
@@ -1050,10 +1185,12 @@ function setupCatchmindCanvas() {
 
   canvas.addEventListener("pointerup", () => {
     drawing = false;
+    catchmindSnapshot = canvas.toDataURL("image/png");
   });
 
   canvas.addEventListener("pointercancel", () => {
     drawing = false;
+    catchmindSnapshot = canvas.toDataURL("image/png");
   });
 }
 
@@ -1061,6 +1198,7 @@ function clearCatchmindCanvas() {
   const canvas = document.querySelector("#catchmindCanvas");
   if (!canvas) return;
   canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+  catchmindSnapshot = null;
 }
 
 function bindActions(root) {
@@ -1072,6 +1210,9 @@ function bindActions(root) {
     }
     if (event.target.id === "teamSizeInput") {
       currentState.teamSize = Number(event.target.value || 4);
+    }
+    if (event.target.id === "relaySecondsInput") {
+      currentState.relaySeconds = Number(event.target.value || 5);
     }
     if (event.target.id === "quietNameInput") {
       currentState.quietName = event.target.value;
@@ -1089,7 +1230,7 @@ function bindActions(root) {
     if (action === "spinRoulette" && !currentState.rouletteSpinning) return spinRoulette();
     if (action === "clearCanvas") return clearCatchmindCanvas();
     if (action === "quietStart") return startQuietMeter();
-    if (action === "quietStop") return stopQuietMeter();
+    if (action === "relayStart") return startCatchmindTurn();
     if (!isHost && currentState?.game === "quiet" && action === "setup") {
       stopQuietMeterStream();
       return saveState({
@@ -1124,6 +1265,7 @@ function bindActions(root) {
     if (action === "finish") return finishRound();
     if (action === "resetUsed") return resetUsed();
     if (action === "quietReset") return resetQuietResults();
+    if (action === "quietStop") return finishQuietByHost();
   });
 }
 

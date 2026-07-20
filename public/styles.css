@@ -616,6 +616,16 @@ h1 {
   margin: 0;
 }
 
+.catchmind-prompt {
+  background: #fff3db;
+  border: 3px solid #ef7d00;
+  border-radius: 8px;
+  color: #a34d00 !important;
+  display: inline-block;
+  justify-self: center;
+  padding: 12px 18px;
+}
+
 .screen-sub {
   font-size: clamp(22px, 5vw, 42px);
   font-weight: 900;
@@ -661,6 +671,34 @@ h1 {
   height: min(58vh, 620px);
   touch-action: none;
   width: 100%;
+}
+
+.catchmind-board {
+  position: relative;
+  width: 100%;
+}
+
+.canvas-lock {
+  align-items: center;
+  background: rgba(23, 32, 51, 0.72);
+  border-radius: 8px;
+  color: #ffffff;
+  display: grid;
+  gap: 18px;
+  inset: 0;
+  justify-items: center;
+  padding: 24px;
+  position: absolute;
+}
+
+.canvas-lock strong {
+  font-size: clamp(34px, 6vw, 72px);
+  font-weight: 950;
+}
+
+.canvas-lock .start-button {
+  max-width: 320px;
+  width: min(72vw, 320px);
 }
 
 .canvas-tools {
