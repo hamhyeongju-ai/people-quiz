@@ -164,6 +164,20 @@ h1 {
   padding: 18px;
 }
 
+.roulette-panel {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  margin: 0 auto;
+  max-width: 860px;
+  text-align: center;
+  width: 100%;
+}
+
+.roulette-panel .label {
+  margin: 0;
+}
+
 .setup-head {
   display: flex;
   flex-wrap: wrap;
@@ -373,6 +387,16 @@ h1 {
   background: #fff3db;
   border-color: #ef7d00;
   color: #a34d00;
+}
+
+.draw-actions {
+  align-items: center;
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  margin: 0 auto;
+  max-width: 520px;
+  width: 100%;
 }
 
 .draw-button {

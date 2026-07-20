@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 5;
+const APP_VERSION = 6;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -277,18 +277,15 @@ async function resetUsed() {
 
 function renderTimer() {
   const state = currentState || defaultState;
-  const countdown = state.countdownEndAt ? state.countdownEndAt - Date.now() : 0;
   const remaining = state.endAt ? state.endAt - Date.now() : 0;
   if (timerLabel) {
-    if (state.view === "countdown") timerLabel.textContent = Math.max(1, Math.ceil(countdown / 1000));
-    else if (state.view === "ready") timerLabel.textContent = "READY";
+    if (state.view === "ready") timerLabel.textContent = "READY";
     else timerLabel.textContent = state.view === "playing" ? formatTime(remaining) : "--:--";
   }
 
   const screenTimer = document.querySelector("#screenTimer");
   if (screenTimer) {
-    if (state.view === "countdown") screenTimer.textContent = Math.max(1, Math.ceil(countdown / 1000));
-    else screenTimer.textContent = state.view === "playing" ? formatTime(remaining) : "";
+    screenTimer.textContent = state.view === "playing" ? formatTime(remaining) : "";
   }
   if (scoreLabel) {
     scoreLabel.textContent = state.game === "goldenbell"
@@ -298,7 +295,6 @@ function renderTimer() {
 
   updateCatchmindRelayLabels(state);
 
-  if (isHost && state.view === "countdown" && countdown <= 0) beginPlaying();
   if (isHost && state.view === "playing" && remaining <= 0) finishRound();
 }
 
@@ -376,12 +372,14 @@ function renderCategoryDraw(state, includeButton) {
           .join("")}
       </div>
     </div>
-    <p class="answer small-answer">${state.rouletteSpinning ? "추첨 중..." : state.category || "랜덤 선택"}</p>
-    ${
-      includeButton
-        ? `<button type="button" class="start-button draw-button" data-action="spinRoulette" ${state.rouletteSpinning ? "disabled" : ""}>START</button>`
-        : ""
-    }
+    <div class="draw-actions">
+      <p class="answer small-answer">${state.rouletteSpinning ? "추첨 중..." : state.category || "랜덤 선택"}</p>
+      ${
+        includeButton
+          ? `<button type="button" class="start-button draw-button" data-action="spinRoulette" ${state.rouletteSpinning ? "disabled" : ""}>START</button>`
+          : ""
+      }
+    </div>
   `;
 }
 
@@ -465,16 +463,6 @@ function renderHost() {
         <p class="label">문제 준비 완료</p>
         <p class="helper-text">갤럭시탭에는 READY가 표시됩니다. START를 누르면 타이머가 시작됩니다.</p>
         <button type="button" class="start-button" data-action="begin">START</button>
-      </section>
-    `;
-    return;
-  }
-
-  if (state.view === "countdown") {
-    hostRoot.innerHTML = `
-      <section class="result-panel">
-        <p class="label">시작 카운트다운</p>
-        <p class="answer">${Math.max(1, Math.ceil(((state.countdownEndAt || Date.now()) - Date.now()) / 1000))}</p>
       </section>
     `;
     return;
@@ -631,19 +619,6 @@ function renderScreen() {
     return;
   }
 
-  if (state.view === "countdown") {
-    screenRoot.innerHTML = `
-      <div class="screen-room">방: ${room}</div>
-      <div id="screenTimer" class="screen-counter"></div>
-      <section class="screen-card ready-card">
-        <p class="eyebrow">${games[state.game].title}</p>
-        <h1>START</h1>
-        <p class="screen-sub">준비하세요</p>
-      </section>
-    `;
-    return;
-  }
-
   if (state.view === "result") {
     screenRoot.innerHTML = `
       <div class="screen-room">방: ${room}</div>
@@ -781,7 +756,7 @@ function bindActions(root) {
     if (action === "menu") return saveState({ ...defaultState, usedIds: currentState?.usedIds || {} });
     if (action === "setup") return saveState({ view: "setup", endAt: null });
     if (action === "start") return startRound();
-    if (action === "begin") return saveState({ view: "countdown", countdownEndAt: Date.now() + 3000 });
+    if (action === "begin") return beginPlaying();
     if (action === "reveal") return toggleRevealAnswer();
     if (action === "nextQuestion") return nextQuestion();
     if (action === "correct") return markResult("correct");
