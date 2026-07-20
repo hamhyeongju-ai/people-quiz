@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=19";
+import { games, packs } from "./game-data.js?v=20";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 19;
+const APP_VERSION = 20;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -24,6 +24,8 @@ let tickTimer = null;
 let quietMeter = null;
 let catchmindSnapshot = null;
 let catchmindHasInk = false;
+let audioContext = null;
+let timingBeatTimer = null;
 
 const defaultState = {
   appVersion: APP_VERSION,
@@ -91,6 +93,90 @@ function formatTime(ms) {
   const min = String(Math.floor(seconds / 60)).padStart(2, "0");
   const sec = String(seconds % 60).padStart(2, "0");
   return `${min}:${sec}`;
+}
+
+function getAudioContext() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!audioContext) audioContext = new AudioContextClass();
+  if (audioContext.state === "suspended") audioContext.resume();
+  return audioContext;
+}
+
+function tone(frequency, start, duration, options = {}) {
+  const context = getAudioContext();
+  if (!context) return;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = options.type || "sine";
+  oscillator.frequency.setValueAtTime(frequency, start);
+  if (options.slideTo) oscillator.frequency.exponentialRampToValueAtTime(options.slideTo, start + duration);
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(options.volume || 0.12, start + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.03);
+}
+
+function playEffect(name) {
+  const context = getAudioContext();
+  if (!context) return;
+  const now = context.currentTime;
+
+  if (name === "correct") {
+    tone(523, now, 0.1, { volume: 0.14 });
+    tone(659, now + 0.09, 0.1, { volume: 0.14 });
+    tone(784, now + 0.18, 0.16, { volume: 0.16 });
+  } else if (name === "pass") {
+    tone(220, now, 0.14, { type: "square", slideTo: 140, volume: 0.1 });
+  } else if (name === "start") {
+    tone(392, now, 0.08, { type: "triangle", volume: 0.12 });
+    tone(523, now + 0.1, 0.12, { type: "triangle", volume: 0.14 });
+  } else if (name === "stop") {
+    tone(784, now, 0.08, { type: "square", volume: 0.12 });
+    tone(392, now + 0.08, 0.18, { type: "square", volume: 0.11 });
+  } else if (name === "reveal") {
+    tone(440, now, 0.08, { volume: 0.11 });
+    tone(660, now + 0.08, 0.14, { volume: 0.13 });
+  } else if (name === "finish") {
+    tone(659, now, 0.1, { volume: 0.12 });
+    tone(523, now + 0.1, 0.1, { volume: 0.12 });
+    tone(330, now + 0.2, 0.22, { volume: 0.13 });
+  } else if (name === "draw") {
+    tone(330, now, 0.07, { type: "triangle", volume: 0.1 });
+    tone(494, now + 0.07, 0.08, { type: "triangle", volume: 0.12 });
+  } else if (name === "tick") {
+    tone(880, now, 0.045, { type: "square", volume: 0.075 });
+  }
+}
+
+function startTimingMusic() {
+  if (timingBeatTimer) return;
+  const pattern = [0, 1, 2, 3, 5, 6, 8, 9, 10, 11];
+  let step = 0;
+  playEffect("start");
+  timingBeatTimer = setInterval(() => {
+    const context = getAudioContext();
+    if (!context) return;
+    if (pattern.includes(step % 12)) {
+      const high = step % 12 === 5 || step % 12 === 6;
+      tone(high ? 740 : 520, context.currentTime, 0.055, { type: "square", volume: high ? 0.09 : 0.075 });
+    }
+    step += 1;
+  }, 105);
+}
+
+function stopTimingMusic() {
+  if (!timingBeatTimer) return;
+  clearInterval(timingBeatTimer);
+  timingBeatTimer = null;
+}
+
+function syncAudio(state) {
+  if (state.game === "timing" && state.view === "playing" && screenRoot) return;
+  stopTimingMusic();
 }
 
 function itemId(game, item) {
@@ -201,6 +287,7 @@ async function openRoulette() {
 }
 
 async function spinRoulette() {
+  playEffect("draw");
   const categories = currentState.rouletteOptions?.length
     ? currentState.rouletteOptions
     : getCategoryOptions(currentState.game);
@@ -270,6 +357,7 @@ async function startRound() {
 }
 
 async function beginPlaying() {
+  playEffect("start");
   const now = Date.now();
   const duration = Number(currentState.duration || games[currentState.game].defaultSeconds) * 1000;
   const relayTotal = Math.max(1, Number(currentState.teamSize || 4) - 1);
@@ -289,11 +377,13 @@ async function beginPlaying() {
 }
 
 async function finishRound() {
+  playEffect("finish");
   await saveState({ view: "result", endAt: null });
 }
 
 async function markResult(kind) {
   if (!currentState?.currentItem) return;
+  playEffect(kind === "correct" ? "correct" : "pass");
 
   const usedIds = clone(currentState.usedIds || {});
   const gameUsed = new Set(usedIds[currentState.game] || []);
@@ -333,10 +423,12 @@ async function nextQuestion() {
 }
 
 async function toggleRevealAnswer() {
+  playEffect("reveal");
   await saveState({ revealAnswer: !currentState.revealAnswer });
 }
 
 async function revivalQuestion() {
+  playEffect("draw");
   const items = (packs.goldenbell?.["패자부활전"] || []).map((item) => ({
     ...item,
     name: item.question,
@@ -376,6 +468,7 @@ function stopQuietMeterStream() {
 
 async function startQuietMeter() {
   if (!screenRoot) return;
+  playEffect("start");
   const input = document.querySelector("#quietNameInput");
   const name = (input?.value || currentState.quietName || "").trim() || `도전자 ${(currentState.quietResults || []).length + 1}`;
 
@@ -471,6 +564,7 @@ async function stopQuietMeter() {
 }
 
 async function finishQuietByHost() {
+  playEffect("stop");
   const peak = Number(currentState.quietPeakLevel || 0);
   const name = currentState.quietName || `도전자 ${(currentState.quietResults || []).length + 1}`;
   const results = clone(currentState.quietResults || []);
@@ -494,6 +588,7 @@ function timingRankings(results = []) {
 
 async function startTimingChallenge() {
   if (!screenRoot) return;
+  startTimingMusic();
   const input = document.querySelector("#timingNameInput");
   const name = (input?.value || currentState.timingName || "").trim() || `도전자 ${(currentState.timingResults || []).length + 1}`;
 
@@ -508,6 +603,8 @@ async function startTimingChallenge() {
 
 async function stopTimingChallenge() {
   if (!screenRoot || !currentState?.timingStartedAt) return;
+  stopTimingMusic();
+  playEffect("stop");
   const elapsed = (Date.now() - currentState.timingStartedAt) / 1000;
   const target = Number(currentState.timingTarget || 7.77);
   const diff = Math.abs(elapsed - target);
@@ -541,6 +638,7 @@ async function resetTimingResults() {
 async function startCatchmindTurn() {
   if (currentState?.game !== "catchmind" || currentState?.view !== "playing") return;
   if (currentState.relayPhase === "drawing" || currentState.relayPhase === "guess") return;
+  playEffect("start");
 
   const now = Date.now();
   const relayTotal = Math.max(1, Number(currentState.relayTotal || Math.max(1, Number(currentState.teamSize || 4) - 1)));
@@ -559,6 +657,7 @@ async function startCatchmindTurn() {
 
 async function finishCatchmindTurn() {
   if (currentState?.game !== "catchmind" || currentState?.view !== "playing" || currentState.relayPhase !== "drawing") return;
+  playEffect("stop");
 
   const relayTotal = Math.max(1, Number(currentState.relayTotal || 3));
   const currentIndex = Math.max(1, Number(currentState.relayIndex || 1));
@@ -1329,6 +1428,7 @@ function render() {
   if ((currentState?.game !== "quiet" || currentState?.view !== "playing") && quietMeter) {
     stopQuietMeterStream();
   }
+  syncAudio(currentState || defaultState);
   if (isHost) renderHost();
   else {
     if (currentState?.game === "catchmind" && currentState?.view === "playing") captureCatchmindCanvas();
@@ -1571,4 +1671,5 @@ loadPeople()
 window.addEventListener("beforeunload", () => {
   if (tickTimer) clearInterval(tickTimer);
   stopQuietMeterStream();
+  stopTimingMusic();
 });
