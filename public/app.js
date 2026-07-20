@@ -13,6 +13,7 @@ const params = new URLSearchParams(window.location.search);
 const room = params.get("room") || "family";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
+const APP_VERSION = 2;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -20,6 +21,7 @@ let people = [];
 let tickTimer = null;
 
 const defaultState = {
+  appVersion: APP_VERSION,
   view: "menu",
   game: null,
   category: null,
@@ -29,11 +31,13 @@ const defaultState = {
   pass: 0,
   endAt: null,
   usedIds: {},
+  rouletteOptions: [],
   updatedAt: Date.now(),
 };
 
 const personCategoryMap = {
   "한국 유명인": ["손흥민", "김연아", "유재석", "봉준호", "박지성", "싸이", "이정재", "정호연", "강호동", "김종국", "송중기", "박찬욱", "박세리"],
+  "세계 스타": ["마이클 조던", "리오넬 메시", "크리스티아누 호날두", "르브론 제임스", "우사인 볼트", "버락 오바마", "도널드 트럼프", "마릴린 먼로", "찰리 채플린", "테일러 스위프트", "비욘세", "마이클 잭슨", "성룡"],
   "스포츠": ["손흥민", "김연아", "박지성", "마이클 조던", "리오넬 메시", "크리스티아누 호날두", "르브론 제임스", "우사인 볼트", "코비 브라이언트", "타이거 우즈", "세리나 윌리엄스", "로저 페더러", "라파엘 나달", "노바크 조코비치", "네이마르", "킬리안 음바페", "스테판 커리", "샤킬 오닐", "톰 브래디", "무하마드 알리", "마이크 타이슨", "박세리", "스즈키 이치로", "오타니 쇼헤이"],
   "기업인": ["일론 머스크", "빌 게이츠", "스티브 잡스", "제프 베이조스", "마크 저커버그", "워런 버핏", "팀 쿡", "젠슨 황", "순다르 피차이", "사티아 나델라", "잭 마", "리처드 브랜슨", "오프라 윈프리"],
   "정치/역사": ["이순신", "버락 오바마", "도널드 트럼프", "넬슨 만델라", "마하트마 간디", "윈스턴 처칠", "조 바이든", "힐러리 클린턴", "앙겔라 메르켈", "에마뉘엘 마크롱", "저스틴 트뤼도", "시진핑", "블라디미르 푸틴", "볼로디미르 젤렌스키", "마거릿 대처", "존 F. 케네디", "에이브러햄 링컨", "마틴 루터 킹 주니어"],
@@ -63,9 +67,7 @@ function getItems(game, category) {
   }
 
   const categoryPack = packs[game]?.[category] || [];
-  if (game === "goldenbell") {
-    return categoryPack.map((item) => ({ ...item, name: item.question }));
-  }
+  if (game === "goldenbell") return categoryPack.map((item) => ({ ...item, name: item.question }));
   return categoryPack.map((word) => ({ word, name: word }));
 }
 
@@ -92,6 +94,7 @@ async function saveState(nextState) {
     await firebase.set(roomRef, currentState);
     return;
   }
+
   localStorage.setItem(`party-games:${room}`, JSON.stringify(currentState));
 }
 
@@ -105,6 +108,7 @@ async function chooseGame(game) {
     score: 0,
     pass: 0,
     endAt: null,
+    rouletteOptions: [],
   });
 }
 
@@ -162,17 +166,30 @@ function renderTimer() {
   const state = currentState || defaultState;
   const remaining = state.endAt ? state.endAt - Date.now() : 0;
   if (timerLabel) timerLabel.textContent = state.view === "playing" ? formatTime(remaining) : "--:--";
+
   const screenTimer = document.querySelector("#screenTimer");
   if (screenTimer) screenTimer.textContent = state.view === "playing" ? formatTime(remaining) : "";
   if (scoreLabel) scoreLabel.textContent = `정답 ${state.score || 0} · 패스 ${state.pass || 0}`;
 
-  if (isHost && state.view === "playing" && remaining <= 0) {
-    finishRound();
-  }
+  if (isHost && state.view === "playing" && remaining <= 0) finishRound();
 }
 
 function button(label, className, action) {
   return `<button type="button" class="${className}" data-action="${action}">${label}</button>`;
+}
+
+function gameCards(mode) {
+  return Object.entries(games)
+    .map(
+      ([key, game]) => `
+        <button type="button" class="game-card" data-action="game:${key}">
+          <span>${game.title}</span>
+          <strong>${game.description}</strong>
+          ${mode === "screen" ? "<em>눌러서 선택</em>" : ""}
+        </button>
+      `,
+    )
+    .join("");
 }
 
 function renderHost() {
@@ -182,18 +199,11 @@ function renderHost() {
 
   if (state.view === "menu") {
     hostRoot.innerHTML = `
-      <section class="game-grid">
-        ${Object.entries(games)
-          .map(
-            ([key, game]) => `
-              <button type="button" class="game-card" data-action="game:${key}">
-                <span>${game.title}</span>
-                <strong>${game.description}</strong>
-              </button>
-            `,
-          )
-          .join("")}
+      <section class="notice-panel">
+        <p class="label">게임 선택 대기</p>
+        <p class="helper-text">갤럭시탭 참가자 화면에서도 게임을 고를 수 있습니다.</p>
       </section>
+      <section class="game-grid">${gameCards("host")}</section>
     `;
     return;
   }
@@ -240,11 +250,8 @@ function renderHost() {
   }
 
   if (state.view === "playing") {
-    const item = state.currentItem;
     hostRoot.innerHTML = `
-      <section class="stage">
-        ${renderHostItem(state.game, item)}
-      </section>
+      <section class="stage">${renderHostItem(state.game, state.currentItem)}</section>
       <nav class="controls">
         ${button("정답", "primary", "correct")}
         ${button("패스", "secondary", "pass")}
@@ -303,12 +310,25 @@ function renderScreen() {
   const state = currentState || defaultState;
   if (!screenRoot) return;
 
-  if (state.view === "menu" || state.view === "setup") {
+  if (state.view === "menu") {
+    screenRoot.innerHTML = `
+      <div class="screen-room">방: ${room}</div>
+      <section class="screen-menu">
+        <p class="eyebrow">종합게임패키지</p>
+        <h1>어떤 게임을 할까요?</h1>
+        <div class="game-grid screen-game-grid">${gameCards("screen")}</div>
+      </section>
+    `;
+    return;
+  }
+
+  if (state.view === "setup") {
     screenRoot.innerHTML = `
       <div class="screen-room">방: ${room}</div>
       <section class="screen-card">
-        <p class="eyebrow">종합게임패키지</p>
-        <h1>진행자가 게임을 고르는 중</h1>
+        <p class="eyebrow">선택 완료</p>
+        <h1>${games[state.game].title}</h1>
+        <p class="screen-sub">진행자가 카테고리와 시간을 준비하고 있어요</p>
       </section>
     `;
     return;
@@ -340,21 +360,16 @@ function renderScreen() {
     return;
   }
 
-  const item = state.currentItem;
   screenRoot.innerHTML = `
     <div class="screen-room">방: ${room}</div>
     <div id="screenTimer" class="screen-counter"></div>
-    ${renderScreenItem(state.game, item)}
+    ${renderScreenItem(state.game, state.currentItem)}
   `;
 }
 
 function renderScreenItem(game, item) {
-  if (!item) {
-    return `<section class="screen-card"><h1>문제가 없습니다</h1></section>`;
-  }
-  if (game === "person") {
-    return `<img class="screen-image" src="${item.image}" alt="문제 인물 사진" />`;
-  }
+  if (!item) return `<section class="screen-card"><h1>문제가 없습니다</h1></section>`;
+  if (game === "person") return `<img class="screen-image" src="${item.image}" alt="문제 인물 사진" />`;
   if (game === "goldenbell") {
     return `
       <section class="screen-card">
@@ -386,20 +401,23 @@ function render() {
   renderTimer();
 }
 
-function bindHostEvents() {
-  if (!hostRoot) return;
-  hostRoot.addEventListener("input", (event) => {
+function bindActions(root) {
+  if (!root) return;
+
+  root.addEventListener("input", (event) => {
     if (event.target.id === "durationInput") {
       currentState.duration = Number(event.target.value || 60);
     }
   });
 
-  hostRoot.addEventListener("click", async (event) => {
+  root.addEventListener("click", async (event) => {
     const target = event.target.closest("[data-action]");
     if (!target) return;
-    const action = target.dataset.action;
 
+    const action = target.dataset.action;
     if (action.startsWith("game:")) return chooseGame(action.slice(5));
+    if (!isHost) return;
+
     if (action.startsWith("category:")) return chooseCategory(action.slice(9));
     if (action === "menu") return saveState({ ...defaultState, usedIds: currentState?.usedIds || {} });
     if (action === "setup") return saveState({ view: "setup", endAt: null });
@@ -440,12 +458,19 @@ async function setupRealtime() {
   }
 
   onValue(roomRef, (snapshotValue) => {
-    currentState = { ...clone(defaultState), ...(snapshotValue.val() || {}) };
+    const incomingState = snapshotValue.val() || {};
+    if (incomingState.appVersion !== APP_VERSION) {
+      currentState = clone(defaultState);
+      saveState(currentState);
+      return;
+    }
+
+    currentState = { ...clone(defaultState), ...incomingState };
     render();
   });
 }
 
-bindHostEvents();
+bindActions(hostRoot || screenRoot);
 loadPeople()
   .then(setupRealtime)
   .then(() => {
