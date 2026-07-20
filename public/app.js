@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=18";
+import { games, packs } from "./game-data.js?v=19";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 18;
+const APP_VERSION = 19;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -23,6 +23,7 @@ let people = [];
 let tickTimer = null;
 let quietMeter = null;
 let catchmindSnapshot = null;
+let catchmindHasInk = false;
 
 const defaultState = {
   appVersion: APP_VERSION,
@@ -54,6 +55,11 @@ const defaultState = {
   quietPeakLevel: 0,
   quietResults: [],
   quietError: null,
+  timingTarget: 7.77,
+  timingName: "",
+  timingStartedAt: null,
+  timingElapsed: null,
+  timingResults: [],
   updatedAt: Date.now(),
 };
 
@@ -98,7 +104,7 @@ function getCategoryOptions(game) {
 }
 
 function getItems(game, category) {
-  if (game === "quiet") return [];
+  if (game === "quiet" || game === "timing") return [];
 
   if (game === "person") {
     if (!category || category === "전체") return people;
@@ -174,6 +180,9 @@ async function chooseGame(game) {
     quietCurrentLevel: 0,
     quietPeakLevel: 0,
     quietError: null,
+    timingName: "",
+    timingStartedAt: null,
+    timingElapsed: null,
   });
 }
 
@@ -228,6 +237,18 @@ async function spinRoulette() {
 }
 
 async function startRound() {
+  if (currentState.game === "timing") {
+    await saveState({
+      view: "ready",
+      currentItem: null,
+      timingName: "",
+      timingStartedAt: null,
+      timingElapsed: null,
+      endAt: null,
+    });
+    return;
+  }
+
   const { item, usedIds } = getUnusedItem(currentState);
   await saveState({
     view: "ready",
@@ -467,6 +488,56 @@ async function finishQuietByHost() {
   });
 }
 
+function timingRankings(results = []) {
+  return [...results].sort((a, b) => a.diff - b.diff);
+}
+
+async function startTimingChallenge() {
+  if (!screenRoot) return;
+  const input = document.querySelector("#timingNameInput");
+  const name = (input?.value || currentState.timingName || "").trim() || `도전자 ${(currentState.timingResults || []).length + 1}`;
+
+  await saveState({
+    view: "playing",
+    timingName: name,
+    timingStartedAt: Date.now(),
+    timingElapsed: null,
+    endAt: null,
+  });
+}
+
+async function stopTimingChallenge() {
+  if (!screenRoot || !currentState?.timingStartedAt) return;
+  const elapsed = (Date.now() - currentState.timingStartedAt) / 1000;
+  const target = Number(currentState.timingTarget || 7.77);
+  const diff = Math.abs(elapsed - target);
+  const name = currentState.timingName || `도전자 ${(currentState.timingResults || []).length + 1}`;
+  const results = clone(currentState.timingResults || []);
+  results.push({
+    name,
+    elapsed: Number(elapsed.toFixed(2)),
+    target: Number(target.toFixed(2)),
+    diff: Number(diff.toFixed(2)),
+    at: Date.now(),
+  });
+
+  await saveState({
+    view: "result",
+    timingElapsed: Number(elapsed.toFixed(2)),
+    timingResults: results,
+    timingStartedAt: null,
+  });
+}
+
+async function resetTimingResults() {
+  await saveState({
+    timingResults: [],
+    timingName: "",
+    timingStartedAt: null,
+    timingElapsed: null,
+  });
+}
+
 async function startCatchmindTurn() {
   if (currentState?.game !== "catchmind" || currentState?.view !== "playing") return;
   if (currentState.relayPhase === "drawing" || currentState.relayPhase === "guess") return;
@@ -530,7 +601,9 @@ function renderTimer() {
       ? "생존형 골든벨"
       : state.game === "quiet"
         ? `기록 ${state.quietResults?.length || 0}명`
-        : `정답 ${state.score || 0} · 패스 ${state.pass || 0}`;
+        : state.game === "timing"
+          ? `기록 ${state.timingResults?.length || 0}명`
+          : `정답 ${state.score || 0} · 패스 ${state.pass || 0}`;
   }
 
   updateCatchmindRelayLabels(state);
@@ -657,6 +730,24 @@ function renderQuietLeaderboard(results = []) {
   `;
 }
 
+function renderTimingLeaderboard(results = []) {
+  if (!results.length) return `<p class="helper-text">아직 기록이 없습니다.</p>`;
+  return `
+    <ol class="quiet-list">
+      ${timingRankings(results)
+        .map(
+          (result, index) => `
+            <li>
+              <span>${index + 1}. ${escapeHtml(result.name)}</span>
+              <strong>${Number(result.elapsed).toFixed(2)}초 · 오차 ${Number(result.diff).toFixed(2)}초</strong>
+            </li>
+          `,
+        )
+        .join("")}
+    </ol>
+  `;
+}
+
 function renderQuietGauge(level = 0, peak = 0) {
   const capped = Math.min(100, Math.max(0, peak));
   return `
@@ -730,6 +821,28 @@ function renderHost() {
       `;
       return;
     }
+    if (state.game === "timing") {
+      hostRoot.innerHTML = `
+        <section class="setup-panel quiet-panel">
+          <div class="setup-head">
+            <button type="button" class="secondary" data-action="menu">← 게임 선택</button>
+            ${button("기록 초기화", "danger", "timingReset")}
+          </div>
+          <p class="label">시간맞추기 준비</p>
+          <label class="field">
+            <span>목표 시간(초)</span>
+            <input id="timingTargetInput" type="number" min="1" max="60" step="0.01" value="${Number(state.timingTarget || 7.77).toFixed(2)}" />
+          </label>
+          <p class="helper-text">갤럭시탭에서 도전자 이름을 입력하고 시작합니다. 목표 시간과 오차가 가장 작은 사람이 1등입니다.</p>
+          <h2 class="section-title">현재 순위</h2>
+          ${renderTimingLeaderboard(state.timingResults)}
+          <div class="controls">
+            ${button("게임 시작", "primary", "start")}
+          </div>
+        </section>
+      `;
+      return;
+    }
 
     const game = games[state.game];
     const items = getItems(state.game, state.category);
@@ -789,6 +902,17 @@ function renderHost() {
       `;
       return;
     }
+    if (state.game === "timing") {
+      hostRoot.innerHTML = `
+        <section class="result-panel quiet-panel">
+          <p class="label">시간맞추기</p>
+          <h1>목표 ${Number(state.timingTarget || 7.77).toFixed(2)}초</h1>
+          <p class="helper-text">갤럭시탭에서 도전자 이름을 입력하고 START를 누르면 화면이 검게 바뀝니다.</p>
+          ${renderTimingLeaderboard(state.timingResults)}
+        </section>
+      `;
+      return;
+    }
 
     hostRoot.innerHTML = `
       <section class="result-panel">
@@ -819,6 +943,20 @@ function renderHost() {
       `;
       return;
     }
+    if (state.game === "timing") {
+      hostRoot.innerHTML = `
+        <section class="answer-panel quiet-panel">
+          <p class="label">도전 중</p>
+          <h1>${escapeHtml(state.timingName || "도전자")}</h1>
+          <p class="helper-text">참가자가 목표 시간에 가깝다고 느끼는 순간 STOP을 누릅니다.</p>
+        </section>
+        <section class="result-panel quiet-panel">
+          <h2 class="section-title">현재 순위</h2>
+          ${renderTimingLeaderboard(state.timingResults)}
+        </section>
+      `;
+      return;
+    }
 
     hostRoot.innerHTML = `
       <section class="stage">${renderHostItem(state.game, state.currentItem)}</section>
@@ -837,6 +975,24 @@ function renderHost() {
           <div class="controls">
             ${button("다음 도전자", "primary", "setup")}
             ${button("기록 초기화", "danger", "quietReset")}
+            ${button("게임 선택", "secondary", "menu")}
+          </div>
+        </section>
+      `;
+      return;
+    }
+    if (state.game === "timing") {
+      const last = state.timingElapsed == null ? "" : `${Number(state.timingElapsed).toFixed(2)}초`;
+      const diff = state.timingElapsed == null ? "" : `오차 ${Math.abs(Number(state.timingElapsed) - Number(state.timingTarget || 7.77)).toFixed(2)}초`;
+      hostRoot.innerHTML = `
+        <section class="result-panel quiet-panel">
+          <p class="label">시간맞추기 결과</p>
+          <h1>${last || "순위표"}</h1>
+          <p class="helper-text">${diff}</p>
+          ${renderTimingLeaderboard(state.timingResults)}
+          <div class="controls">
+            ${button("다음 도전자", "primary", "setup")}
+            ${button("기록 초기화", "danger", "timingReset")}
             ${button("게임 선택", "secondary", "menu")}
           </div>
         </section>
@@ -953,6 +1109,18 @@ function renderScreen() {
       `;
       return;
     }
+    if (state.game === "timing") {
+      screenRoot.innerHTML = `
+        <div class="screen-room">방: ${room}</div>
+        <section class="screen-card quiet-screen">
+          <p class="eyebrow">시간맞추기</p>
+          <h1>목표 ${Number(state.timingTarget || 7.77).toFixed(2)}초</h1>
+          <p class="screen-sub">진행자가 게임 시작을 누르면 도전할 수 있습니다.</p>
+          ${renderTimingLeaderboard(state.timingResults)}
+        </section>
+      `;
+      return;
+    }
 
     const isGoldenbell = state.game === "goldenbell";
     screenRoot.innerHTML = `
@@ -1011,6 +1179,22 @@ function renderScreen() {
       `;
       return;
     }
+    if (state.game === "timing") {
+      screenRoot.innerHTML = `
+        <div class="screen-room">방: ${room}</div>
+        <section class="screen-card quiet-screen">
+          <p class="eyebrow">시간맞추기</p>
+          <h1>${Number(state.timingTarget || 7.77).toFixed(2)}초 맞추기</h1>
+          <label class="field quiet-name-field">
+            <span>도전자 이름</span>
+            <input id="timingNameInput" type="text" maxlength="12" value="${escapeHtml(state.timingName || "")}" placeholder="예: 1번 도전자" />
+          </label>
+          <button type="button" class="start-button" data-action="timingStart">START</button>
+          ${renderTimingLeaderboard(state.timingResults)}
+        </section>
+      `;
+      return;
+    }
 
     screenRoot.innerHTML = `
       <div class="screen-room">방: ${room}</div>
@@ -1031,6 +1215,21 @@ function renderScreen() {
           <p class="eyebrow">조용히 먹기 결과</p>
           <h1>순위표</h1>
           ${renderQuietLeaderboard(state.quietResults)}
+          <button type="button" class="primary" data-action="setup">다음 도전자</button>
+        </section>
+      `;
+      return;
+    }
+    if (state.game === "timing") {
+      const elapsed = Number(state.timingElapsed || 0);
+      const diff = Math.abs(elapsed - Number(state.timingTarget || 7.77));
+      screenRoot.innerHTML = `
+        <div class="screen-room">방: ${room}</div>
+        <section class="screen-card quiet-screen">
+          <p class="eyebrow">시간맞추기 결과</p>
+          <h1>${elapsed.toFixed(2)}초</h1>
+          <p class="screen-sub">목표 ${Number(state.timingTarget || 7.77).toFixed(2)}초 · 오차 ${diff.toFixed(2)}초</p>
+          ${renderTimingLeaderboard(state.timingResults)}
           <button type="button" class="primary" data-action="setup">다음 도전자</button>
         </section>
       `;
@@ -1065,6 +1264,14 @@ function renderScreenItem(game, item) {
         <h1>${escapeHtml(currentState.quietName || "도전자")}</h1>
         ${renderQuietGauge(currentState.quietCurrentLevel, currentState.quietPeakLevel)}
         <p class="screen-sub">${currentState.quietError || "진행자가 확인 후 종료합니다."}</p>
+      </section>
+    `;
+  }
+  if (game === "timing") {
+    return `
+      <section class="timing-stage">
+        <p>${escapeHtml(currentState.timingName || "도전자")}</p>
+        <button type="button" class="timing-stop-button" data-action="timingStop">STOP</button>
       </section>
     `;
   }
@@ -1134,7 +1341,18 @@ function render() {
 function captureCatchmindCanvas() {
   const canvas = document.querySelector("#catchmindCanvas");
   if (!canvas) return;
+  if (isCanvasBlank(canvas) && catchmindSnapshot) return;
   catchmindSnapshot = canvas.toDataURL("image/png");
+  catchmindHasInk = !isCanvasBlank(canvas);
+}
+
+function isCanvasBlank(canvas) {
+  const context = canvas.getContext("2d");
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  for (let index = 3; index < pixels.length; index += 4) {
+    if (pixels[index] !== 0) return false;
+  }
+  return true;
 }
 
 function setupCatchmindCanvas() {
@@ -1149,7 +1367,10 @@ function setupCatchmindCanvas() {
 
   if (catchmindSnapshot) {
     const image = new Image();
-    image.onload = () => context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    image.onload = () => {
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      catchmindHasInk = true;
+    };
     image.src = catchmindSnapshot;
   }
 
@@ -1181,16 +1402,17 @@ function setupCatchmindCanvas() {
     const p = point(event);
     context.lineTo(p.x, p.y);
     context.stroke();
+    catchmindHasInk = true;
   });
 
   canvas.addEventListener("pointerup", () => {
     drawing = false;
-    catchmindSnapshot = canvas.toDataURL("image/png");
+    if (catchmindHasInk) catchmindSnapshot = canvas.toDataURL("image/png");
   });
 
   canvas.addEventListener("pointercancel", () => {
     drawing = false;
-    catchmindSnapshot = canvas.toDataURL("image/png");
+    if (catchmindHasInk) catchmindSnapshot = canvas.toDataURL("image/png");
   });
 }
 
@@ -1199,6 +1421,7 @@ function clearCatchmindCanvas() {
   if (!canvas) return;
   canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
   catchmindSnapshot = null;
+  catchmindHasInk = false;
 }
 
 function bindActions(root) {
@@ -1214,8 +1437,14 @@ function bindActions(root) {
     if (event.target.id === "relaySecondsInput") {
       currentState.relaySeconds = Number(event.target.value || 5);
     }
+    if (event.target.id === "timingTargetInput") {
+      currentState.timingTarget = Number(event.target.value || 7.77);
+    }
     if (event.target.id === "quietNameInput") {
       currentState.quietName = event.target.value;
+    }
+    if (event.target.id === "timingNameInput") {
+      currentState.timingName = event.target.value;
     }
   });
 
@@ -1230,6 +1459,8 @@ function bindActions(root) {
     if (action === "spinRoulette" && !currentState.rouletteSpinning) return spinRoulette();
     if (action === "clearCanvas") return clearCatchmindCanvas();
     if (action === "quietStart") return startQuietMeter();
+    if (action === "timingStart") return startTimingChallenge();
+    if (action === "timingStop") return stopTimingChallenge();
     if (action === "relayStart") return startCatchmindTurn();
     if (!isHost && currentState?.game === "quiet" && action === "setup") {
       stopQuietMeterStream();
@@ -1239,6 +1470,14 @@ function bindActions(root) {
         quietCurrentLevel: 0,
         quietPeakLevel: 0,
         quietError: null,
+      });
+    }
+    if (!isHost && currentState?.game === "timing" && action === "setup") {
+      return saveState({
+        view: "setup",
+        timingName: "",
+        timingStartedAt: null,
+        timingElapsed: null,
       });
     }
     if (!isHost) return;
@@ -1253,6 +1492,9 @@ function bindActions(root) {
         quietCurrentLevel: 0,
         quietPeakLevel: currentState?.game === "quiet" ? 0 : currentState?.quietPeakLevel,
         quietError: null,
+        timingName: currentState?.game === "timing" ? "" : currentState?.timingName,
+        timingStartedAt: null,
+        timingElapsed: currentState?.game === "timing" ? null : currentState?.timingElapsed,
       });
     }
     if (action === "start") return startRound();
@@ -1265,6 +1507,7 @@ function bindActions(root) {
     if (action === "finish") return finishRound();
     if (action === "resetUsed") return resetUsed();
     if (action === "quietReset") return resetQuietResults();
+    if (action === "timingReset") return resetTimingResults();
     if (action === "quietStop") return finishQuietByHost();
   });
 }

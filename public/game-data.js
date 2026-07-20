@@ -35,6 +35,12 @@ export const games = {
     defaultSeconds: 0,
     categories: ["전체"],
   },
+  timing: {
+    title: "시간맞추기",
+    description: "목표 시간에 가장 가깝게 STOP을 누르는 게임",
+    defaultSeconds: 0,
+    categories: ["전체"],
+  },
 };
 
 export const packs = {
