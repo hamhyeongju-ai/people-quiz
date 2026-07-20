@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=10";
+import { games, packs } from "./game-data.js?v=11";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 10;
+const APP_VERSION = 11;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -53,7 +53,7 @@ const personCategoryMap = {
   "기업인": ["일론 머스크", "빌 게이츠", "스티브 잡스", "제프 베이조스", "마크 저커버그", "워런 버핏", "팀 쿡", "젠슨 황"],
   "정치/역사": ["이순신", "버락 오바마", "도널드 트럼프", "넬슨 만델라", "마하트마 간디", "윈스턴 처칠", "조 바이든", "힐러리 클린턴", "앙겔라 메르켈", "에마뉘엘 마크롱", "시진핑", "블라디미르 푸틴", "볼로디미르 젤렌스키", "존 F. 케네디", "에이브러햄 링컨", "마틴 루터 킹 주니어"],
   "문화예술": ["봉준호", "싸이", "이정재", "정호연", "송중기", "박찬욱", "마릴린 먼로", "테일러 스위프트", "비욘세", "마이클 잭슨", "성룡", "레오나르도 디카프리오", "브래드 피트", "톰 크루즈", "윌 스미스", "로버트 다우니 주니어", "드웨인 존슨", "엠마 왓슨", "안젤리나 졸리", "스칼릿 조핸슨", "메릴 스트립", "아델", "에드 시런", "브루노 마스", "저스틴 비버", "레이디 가가", "리아나", "아리아나 그란데", "셀레나 고메즈", "마돈나", "엘비스 프레슬리"],
-  "아이돌": ["아이유", "지드래곤", "제니", "리사", "로제", "지수", "태연", "RM", "슈가", "제이홉", "진", "지민", "뷔", "장원영", "카리나"],
+  "아이돌": ["아이유", "지드래곤", "태연", "BTS", "BLACKPINK", "IVE", "aespa", "NewJeans", "LE SSERAFIM", "SEVENTEEN", "TWICE", "소녀시대", "카라", "god", "젝스키스", "S.E.S.", "브브걸", "리센느", "키키", "ITZY", "NMIXX", "마마무", "레드벨벳", "2NE1", "빅뱅", "원더걸스", "SHINee", "슈퍼주니어", "티아라", "씨스타"],
 };
 
 function clone(value) {
