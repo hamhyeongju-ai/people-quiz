@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 4;
+const APP_VERSION = 5;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -488,31 +488,6 @@ function renderHost() {
     return;
   }
 
-  if (state.view === "ready") {
-    screenRoot.innerHTML = `
-      <div class="screen-room">방: ${room}</div>
-      <section class="screen-card">
-        <p class="eyebrow">${games[state.game].title}</p>
-        <h1>READY</h1>
-        <p class="screen-sub">곧 시작합니다</p>
-      </section>
-    `;
-    return;
-  }
-
-  if (state.view === "countdown") {
-    screenRoot.innerHTML = `
-      <div class="screen-room">방: ${room}</div>
-      <div id="screenTimer" class="screen-counter"></div>
-      <section class="screen-card">
-        <p class="eyebrow">${games[state.game].title}</p>
-        <h1>START</h1>
-        <p class="screen-sub">준비하세요</p>
-      </section>
-    `;
-    return;
-  }
-
   if (state.view === "result") {
     hostRoot.innerHTML = `
       <section class="result-panel">
@@ -639,6 +614,31 @@ function renderScreen() {
         <p class="eyebrow">카테고리 결정</p>
         <h1>결정!</h1>
         <p class="draw-result-word">${state.category}</p>
+      </section>
+    `;
+    return;
+  }
+
+  if (state.view === "ready") {
+    screenRoot.innerHTML = `
+      <div class="screen-room">방: ${room}</div>
+      <section class="screen-card ready-card">
+        <p class="eyebrow">${games[state.game].title}</p>
+        <h1>READY</h1>
+        <p class="screen-sub">진행자가 START를 누르면 시작합니다</p>
+      </section>
+    `;
+    return;
+  }
+
+  if (state.view === "countdown") {
+    screenRoot.innerHTML = `
+      <div class="screen-room">방: ${room}</div>
+      <div id="screenTimer" class="screen-counter"></div>
+      <section class="screen-card ready-card">
+        <p class="eyebrow">${games[state.game].title}</p>
+        <h1>START</h1>
+        <p class="screen-sub">준비하세요</p>
       </section>
     `;
     return;
