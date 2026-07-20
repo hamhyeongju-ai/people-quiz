@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=14";
+import { games, packs } from "./game-data.js?v=15";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 14;
+const APP_VERSION = 15;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -84,8 +84,11 @@ function getItems(game, category) {
     return people.filter((person) => names.includes(person.name));
   }
 
+  if (game === "goldenbell") {
+    return (packs.goldenbell?.["전체"] || []).map((item) => ({ ...item, name: item.question }));
+  }
+
   const categoryPack = packs[game]?.[category] || [];
-  if (game === "goldenbell") return categoryPack.map((item) => ({ ...item, name: item.question }));
   return categoryPack.map((word) => ({ word, name: word }));
 }
 
@@ -276,6 +279,20 @@ async function toggleRevealAnswer() {
   await saveState({ revealAnswer: !currentState.revealAnswer });
 }
 
+async function revivalQuestion() {
+  const items = (packs.goldenbell?.["패자부활전"] || []).map((item) => ({
+    ...item,
+    name: item.question,
+    revival: true,
+  }));
+  const item = items[Math.floor(Math.random() * items.length)] || null;
+  await saveState({
+    currentItem: item,
+    revealAnswer: false,
+    feedback: "패자부활전",
+  });
+}
+
 async function resetUsed() {
   const usedIds = clone(currentState.usedIds || {});
   usedIds[currentState.game] = [];
@@ -431,16 +448,22 @@ function renderHost() {
     const game = games[state.game];
     const items = getItems(state.game, state.category);
     const usedCount = (state.usedIds?.[state.game] || []).length;
+    const isGoldenbell = state.game === "goldenbell";
     hostRoot.innerHTML = `
       <section class="setup-panel">
         <div class="setup-head">
           <button type="button" class="secondary" data-action="menu">← 게임 선택</button>
-          ${button("카테고리 랜덤 추첨", "primary", "roulette")}
+          ${isGoldenbell ? "" : button("카테고리 랜덤 추첨", "primary", "roulette")}
         </div>
-        <p class="label">카테고리</p>
-        <div class="chip-row">
-          ${categoryButtons(state.game, state.category)}
-        </div>
+        ${
+          isGoldenbell
+            ? `<p class="label">골든벨 전체 문제</p>
+               <p class="helper-text">카테고리 없이 전체 문제에서 랜덤으로 진행합니다.</p>`
+            : `<p class="label">카테고리</p>
+               <div class="chip-row">
+                 ${categoryButtons(state.game, state.category)}
+               </div>`
+        }
         <label class="field">
           <span>타이머 초</span>
           <input id="durationInput" type="number" min="10" max="600" step="10" value="${state.duration}" />
@@ -505,6 +528,7 @@ function renderHostControls(state) {
       <nav class="controls">
         ${button(state.revealAnswer ? "정답 숨기기" : "정답 공개", "primary", "reveal")}
         ${button("다음 문제", "secondary", "nextQuestion")}
+        ${button("패자부활전", "secondary", "revival")}
         ${button("종료", "danger", "finish")}
       </nav>
     `;
@@ -533,7 +557,7 @@ function renderHostItem(game, item) {
   if (game === "goldenbell") {
     return `
       <div class="answer-panel">
-        <p class="label">문제</p>
+        <p class="label">${item.revival ? "패자부활전" : "문제"}</p>
         <p class="question">${item.question}</p>
         <p class="label">정답</p>
         <p class="answer small-answer">${item.answer}</p>
@@ -575,16 +599,21 @@ function renderScreen() {
   }
 
   if (state.view === "setup") {
+    const isGoldenbell = state.game === "goldenbell";
     screenRoot.innerHTML = `
       <div class="screen-room">방: ${room}</div>
       <section class="screen-menu">
-        <p class="eyebrow">카테고리 선택</p>
+        <p class="eyebrow">${isGoldenbell ? "골든벨 준비" : "카테고리 선택"}</p>
         <h1>${games[state.game].title}</h1>
-        <p class="screen-sub">참가자들이 카테고리를 골라주세요</p>
-        <div class="chip-row screen-chip-row">
-          ${categoryButtons(state.game, state.category)}
-        </div>
-        <p class="helper-text">선택 후 아이폰 진행자 화면에서 타이머를 맞추고 시작하면 됩니다.</p>
+        ${
+          isGoldenbell
+            ? `<p class="screen-sub">카테고리 없이 전체 문제로 진행합니다</p>`
+            : `<p class="screen-sub">참가자들이 카테고리를 골라주세요</p>
+               <div class="chip-row screen-chip-row">
+                 ${categoryButtons(state.game, state.category)}
+               </div>`
+        }
+        <p class="helper-text">아이폰 진행자 화면에서 타이머를 맞추고 시작하면 됩니다.</p>
       </section>
     `;
     return;
@@ -653,7 +682,7 @@ function renderScreenItem(game, item) {
   if (game === "goldenbell") {
     return `
       <section class="screen-card">
-        <p class="eyebrow">골든벨</p>
+        <p class="eyebrow">${item.revival ? "패자부활전" : "골든벨"}</p>
         <h1>${item.question}</h1>
         ${currentState.revealAnswer ? `<p class="answer reveal-answer">${item.answer}</p>` : ""}
       </section>
@@ -765,6 +794,7 @@ function bindActions(root) {
     if (action === "start") return startRound();
     if (action === "begin") return beginPlaying();
     if (action === "reveal") return toggleRevealAnswer();
+    if (action === "revival") return revivalQuestion();
     if (action === "nextQuestion") return nextQuestion();
     if (action === "correct") return markResult("correct");
     if (action === "pass") return markResult("pass");
