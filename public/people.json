@@ -100,10 +100,6 @@
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Monroecirca1953.jpg/960px-Monroecirca1953.jpg"
   },
   {
-    "name": "찰리 채플린",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Charlie_Chaplin_portrait_Getty_1739411952.jpg/960px-Charlie_Chaplin_portrait_Getty_1739411952.jpg"
-  },
-  {
     "name": "테일러 스위프트",
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png/960px-Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png"
   },
@@ -140,22 +136,6 @@
     "image": "https://upload.wikimedia.org/wikipedia/commons/e/e6/Jen-Hsun_Huang_2025.jpg"
   },
   {
-    "name": "순다르 피차이",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/c/c3/Sundar_Pichai_-_2023_%28cropped%29.jpg"
-  },
-  {
-    "name": "사티아 나델라",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/MS-Exec-Nadella-Satya-2017-08-31-22_%28cropped%29.jpg/960px-MS-Exec-Nadella-Satya-2017-08-31-22_%28cropped%29.jpg"
-  },
-  {
-    "name": "잭 마",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/20th_Anniversary_Schwab_Foundation_Gala_Dinner_%2844887783681%29_%28cropped%29.jpg/960px-20th_Anniversary_Schwab_Foundation_Gala_Dinner_%2844887783681%29_%28cropped%29.jpg"
-  },
-  {
-    "name": "리처드 브랜슨",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/0/08/Richard_Branson_Addresses_the_Our_Ocean_Conference_2015_in_Valpara%C3%ADso_%2821783214958%29_%28cropped%29.jpg"
-  },
-  {
     "name": "오프라 윈프리",
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Oprah_Winfrey_2016.jpg/960px-Oprah_Winfrey_2016.jpg"
   },
@@ -188,10 +168,6 @@
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Emmanuel_Macron_2025_%28cropped%29.jpg/960px-Emmanuel_Macron_2025_%28cropped%29.jpg"
   },
   {
-    "name": "저스틴 트뤼도",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/3/32/Prime_Minister_Trudeau%27s_message_on_Christmas_2023_%280m29s%29_%28cropped%29.jpg"
-  },
-  {
     "name": "시진핑",
     "image": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Xi_Jinping_meets_Putin_May_2026.jpg"
   },
@@ -202,10 +178,6 @@
   {
     "name": "볼로디미르 젤렌스키",
     "image": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Volodymyr_Zelensky_2022_official_portrait_%28cropped%29.jpg"
-  },
-  {
-    "name": "마거릿 대처",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/3/3d/Margaret_Thatcher_stock_portrait_%28cropped%29.jpg"
   },
   {
     "name": "존 F. 케네디",
@@ -254,10 +226,6 @@
   {
     "name": "샤킬 오닐",
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/TechCrunch_Disrupt_2023_-_Day_1_%28cropped%29.jpg/960px-TechCrunch_Disrupt_2023_-_Day_1_%28cropped%29.jpg"
-  },
-  {
-    "name": "톰 브래디",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/25th_Laureus_World_Sports_Awards_-_Red_Carpet_-_Tom_Brady_-_240422_191334_%28cropped%29_%28cropped%29.jpg/960px-25th_Laureus_World_Sports_Awards_-_Red_Carpet_-_Tom_Brady_-_240422_191334_%28cropped%29_%28cropped%29.jpg"
   },
   {
     "name": "무하마드 알리",
@@ -398,5 +366,65 @@
   {
     "name": "파블로 피카소",
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Pablo_picasso_1.jpg/960px-Pablo_picasso_1.jpg"
+  },
+  {
+    "name": "아이유",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/a/a9/221125_%EC%B2%AD%EB%A3%A1%EC%98%81%ED%99%94%EC%83%81_%EB%A0%88%EB%93%9C%EC%B9%B4%ED%8E%AB_01_%28cropped%29.jpg"
+  },
+  {
+    "name": "지드래곤",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/G-Dragon_in_October_2025.jpg/960px-G-Dragon_in_October_2025.jpg"
+  },
+  {
+    "name": "제니",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/7/7a/20260526_Jennie_Kim_04.jpg"
+  },
+  {
+    "name": "리사",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/a/ae/20240314_Lisa_Manoban_07.jpg"
+  },
+  {
+    "name": "로제",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/b/b3/Blackpink_Ros%C3%A9_Rimowa_1.jpg"
+  },
+  {
+    "name": "지수",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/b/bd/20240226_Kim_Jisoo_%EA%B9%80%EC%A7%80%EC%88%98_03.jpg"
+  },
+  {
+    "name": "태연",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/230609_Kim_Tae_Yeon_%28%EA%B9%80%ED%83%9C%EC%97%B0%29.png/960px-230609_Kim_Tae_Yeon_%28%EA%B9%80%ED%83%9C%EC%97%B0%29.png"
+  },
+  {
+    "name": "RM",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/RM_at_W_Korea_Love_Your_W%2C_November_2023.jpg/960px-RM_at_W_Korea_Love_Your_W%2C_November_2023.jpg"
+  },
+  {
+    "name": "슈가",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Suga_for_Valentino_and_Marie_Claire_Korea_06.jpg/960px-Suga_for_Valentino_and_Marie_Claire_Korea_06.jpg"
+  },
+  {
+    "name": "제이홉",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/J-Hope_at_W_Korea_Breast_Cancer_Campaign%2C_15_October_2025.png/960px-J-Hope_at_W_Korea_Breast_Cancer_Campaign%2C_15_October_2025.png"
+  },
+  {
+    "name": "진",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/BTS_Jin_at_Maison_Fred%2C_13_March_2025_04.png/960px-BTS_Jin_at_Maison_Fred%2C_13_March_2025_04.png"
+  },
+  {
+    "name": "지민",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/3/33/Jimin_on_the_way_to_SBS_Radio%2C_31_March_2023_%282%29.jpg"
+  },
+  {
+    "name": "뷔",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/220624_%EB%B0%A9%ED%83%84%EC%86%8C%EB%85%84%EB%8B%A8_%EB%B7%94%281%29.jpg/960px-220624_%EB%B0%A9%ED%83%84%EC%86%8C%EB%85%84%EB%8B%A8_%EB%B7%94%281%29.jpg"
+  },
+  {
+    "name": "장원영",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Jang_Won-young_at_the_Bulgari_HDD_Seoul%2C_December_4%2C_2025.png/960px-Jang_Won-young_at_the_Bulgari_HDD_Seoul%2C_December_4%2C_2025.png"
+  },
+  {
+    "name": "카리나",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Karina_performing_at_TikTok_Awards_%28cropped%29.jpg/960px-Karina_performing_at_TikTok_Awards_%28cropped%29.jpg"
   }
 ]

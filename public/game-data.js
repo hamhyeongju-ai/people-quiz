@@ -3,7 +3,7 @@ export const games = {
     title: "인물퀴즈",
     description: "사진을 보고 인물 이름을 맞히는 게임",
     defaultSeconds: 60,
-    categories: ["전체", "한국 유명인", "세계 스타", "스포츠", "기업인", "정치/역사", "문화예술"],
+    categories: ["전체", "한국 유명인", "세계 스타", "스포츠", "기업인", "정치/역사", "문화예술", "아이돌"],
   },
   charades: {
     title: "몸으로 말해요",
