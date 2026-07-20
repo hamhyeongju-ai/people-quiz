@@ -13,7 +13,7 @@ const params = new URLSearchParams(window.location.search);
 const room = params.get("room") || "family";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 3;
+const APP_VERSION = 4;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -29,7 +29,15 @@ const defaultState = {
   currentItem: null,
   score: 0,
   pass: 0,
+  teamA: 0,
+  teamB: 0,
+  revealAnswer: false,
+  feedback: null,
   endAt: null,
+  countdownEndAt: null,
+  teamSize: 4,
+  relayStartedAt: null,
+  relayTotal: 3,
   usedIds: {},
   rouletteOptions: [],
   rouletteSpinning: false,
@@ -116,9 +124,13 @@ async function chooseGame(game) {
     currentItem: null,
     score: 0,
     pass: 0,
+    revealAnswer: false,
+    feedback: null,
     endAt: null,
+    countdownEndAt: null,
     rouletteOptions: [],
     rouletteSpinning: false,
+    relayStartedAt: null,
   });
 }
 
@@ -167,12 +179,33 @@ async function spinRoulette() {
 async function startRound() {
   const { item, usedIds } = getUnusedItem(currentState);
   await saveState({
-    view: "playing",
+    view: "countdown",
     currentItem: item,
     score: 0,
     pass: 0,
+    revealAnswer: false,
+    feedback: null,
     usedIds,
-    endAt: Date.now() + Number(currentState.duration || games[currentState.game].defaultSeconds) * 1000,
+    countdownEndAt: Date.now() + 3000,
+    endAt: null,
+    relayStartedAt: null,
+    relayTotal: Math.max(1, Number(currentState.teamSize || 4) - 1),
+  });
+}
+
+async function beginPlaying() {
+  const now = Date.now();
+  const duration = Number(currentState.duration || games[currentState.game].defaultSeconds) * 1000;
+  const relayTotal = Math.max(1, Number(currentState.teamSize || 4) - 1);
+  const relayDuration = currentState.game === "catchmind" ? relayTotal * 3000 : 0;
+
+  await saveState({
+    view: "playing",
+    countdownEndAt: null,
+    revealAnswer: false,
+    relayStartedAt: currentState.game === "catchmind" ? now : null,
+    relayTotal,
+    endAt: now + relayDuration + duration,
   });
 }
 
@@ -192,9 +225,24 @@ async function markResult(kind) {
   await saveState({
     currentItem: item,
     usedIds: nextUsedIds,
+    revealAnswer: false,
+    feedback: kind === "correct" ? "정답!" : "패스",
     score: currentState.score + (kind === "correct" ? 1 : 0),
     pass: currentState.pass + (kind === "pass" ? 1 : 0),
   });
+
+  setTimeout(() => {
+    if (currentState?.feedback) saveState({ feedback: null });
+  }, 900);
+}
+
+async function toggleRevealAnswer() {
+  await saveState({ revealAnswer: !currentState.revealAnswer });
+}
+
+async function addTeamScore(team) {
+  const key = team === "A" ? "teamA" : "teamB";
+  await saveState({ [key]: (currentState[key] || 0) + 1 });
 }
 
 async function resetUsed() {
@@ -205,14 +253,57 @@ async function resetUsed() {
 
 function renderTimer() {
   const state = currentState || defaultState;
+  const countdown = state.countdownEndAt ? state.countdownEndAt - Date.now() : 0;
   const remaining = state.endAt ? state.endAt - Date.now() : 0;
-  if (timerLabel) timerLabel.textContent = state.view === "playing" ? formatTime(remaining) : "--:--";
+  if (timerLabel) {
+    if (state.view === "countdown") timerLabel.textContent = Math.max(1, Math.ceil(countdown / 1000));
+    else timerLabel.textContent = state.view === "playing" ? formatTime(remaining) : "--:--";
+  }
 
   const screenTimer = document.querySelector("#screenTimer");
-  if (screenTimer) screenTimer.textContent = state.view === "playing" ? formatTime(remaining) : "";
-  if (scoreLabel) scoreLabel.textContent = `정답 ${state.score || 0} · 패스 ${state.pass || 0}`;
+  if (screenTimer) {
+    if (state.view === "countdown") screenTimer.textContent = Math.max(1, Math.ceil(countdown / 1000));
+    else screenTimer.textContent = state.view === "playing" ? formatTime(remaining) : "";
+  }
+  if (scoreLabel) {
+    scoreLabel.textContent = `정답 ${state.score || 0} · 패스 ${state.pass || 0} · A ${state.teamA || 0} : B ${state.teamB || 0}`;
+  }
 
+  updateCatchmindRelayLabels(state);
+
+  if (isHost && state.view === "countdown" && countdown <= 0) beginPlaying();
   if (isHost && state.view === "playing" && remaining <= 0) finishRound();
+}
+
+function getCatchmindRelayInfo(state) {
+  if (state.game !== "catchmind" || state.view !== "playing" || !state.relayStartedAt) return null;
+  const elapsed = Date.now() - state.relayStartedAt;
+  const relayTotal = state.relayTotal || 3;
+  const drawDuration = relayTotal * 3000;
+
+  if (elapsed < drawDuration) {
+    return {
+      phase: "draw",
+      current: Math.min(relayTotal, Math.floor(elapsed / 3000) + 1),
+      total: relayTotal,
+      seconds: Math.max(1, Math.ceil((3000 - (elapsed % 3000)) / 1000)),
+    };
+  }
+
+  return { phase: "guess", current: relayTotal, total: relayTotal, seconds: 0 };
+}
+
+function updateCatchmindRelayLabels(state) {
+  const info = getCatchmindRelayInfo(state);
+  const text = !info
+    ? ""
+    : info.phase === "draw"
+      ? `${info.current}번 그림 담당 · ${info.seconds}초`
+      : "이제 맞히는 사람이 정답을 외쳐요";
+
+  document.querySelectorAll("[data-relay-status]").forEach((item) => {
+    item.textContent = text;
+  });
 }
 
 function button(label, className, action) {
@@ -311,6 +402,15 @@ function renderHost() {
           <span>타이머 초</span>
           <input id="durationInput" type="number" min="10" max="600" step="10" value="${state.duration}" />
         </label>
+        ${
+          state.game === "catchmind"
+            ? `<label class="field">
+                <span>팀원 수</span>
+                <input id="teamSizeInput" type="number" min="2" max="10" step="1" value="${state.teamSize || 4}" />
+              </label>
+              <p class="helper-text">한 명은 맞히는 사람, 나머지 ${Math.max(1, Number(state.teamSize || 4) - 1)}명이 3초씩 이어서 그립니다.</p>`
+            : ""
+        }
         <p class="helper-text">이 카테고리 문제 ${items.length}개 · 이미 사용 ${usedCount}개</p>
         <div class="controls">
           ${button("사용 기록 초기화", "secondary", "resetUsed")}
@@ -321,14 +421,43 @@ function renderHost() {
     return;
   }
 
+  if (state.view === "countdown") {
+    hostRoot.innerHTML = `
+      <section class="result-panel">
+        <p class="label">잠시 후 시작</p>
+        <p class="answer">READY</p>
+        <p class="helper-text">갤럭시탭에도 카운트다운이 표시됩니다.</p>
+      </section>
+    `;
+    return;
+  }
+
   if (state.view === "playing") {
     hostRoot.innerHTML = `
       <section class="stage">${renderHostItem(state.game, state.currentItem)}</section>
       <nav class="controls">
+        ${state.game === "goldenbell" ? button(state.revealAnswer ? "정답 숨기기" : "정답 공개", "primary", "reveal") : ""}
         ${button("정답", "primary", "correct")}
         ${button("패스", "secondary", "pass")}
         ${button("종료", "danger", "finish")}
       </nav>
+      <nav class="controls">
+        ${button("A팀 +1", "secondary", "teamA")}
+        ${button("B팀 +1", "secondary", "teamB")}
+      </nav>
+    `;
+    return;
+  }
+
+  if (state.view === "countdown") {
+    screenRoot.innerHTML = `
+      <div class="screen-room">방: ${room}</div>
+      <div id="screenTimer" class="screen-counter"></div>
+      <section class="screen-card">
+        <p class="eyebrow">${games[state.game].title}</p>
+        <h1>곧 시작합니다</h1>
+        <p class="screen-sub">준비하세요</p>
+      </section>
     `;
     return;
   }
@@ -338,7 +467,7 @@ function renderHost() {
       <section class="result-panel">
         <p class="label">게임 종료</p>
         <p class="answer">${state.score || 0}개 정답</p>
-        <p class="helper-text">패스 ${state.pass || 0}개</p>
+        <p class="helper-text">패스 ${state.pass || 0}개 · A팀 ${state.teamA || 0}점 · B팀 ${state.teamB || 0}점</p>
         <div class="controls">
           ${button("다시 하기", "primary", "start")}
           ${button("설정으로", "secondary", "setup")}
@@ -367,6 +496,16 @@ function renderHostItem(game, item) {
         <p class="question">${item.question}</p>
         <p class="label">정답</p>
         <p class="answer small-answer">${item.answer}</p>
+        <p class="helper-text">${currentState.revealAnswer ? "갤럭시탭에 정답 공개 중" : "아직 갤럭시탭에는 문제만 보입니다"}</p>
+      </div>
+    `;
+  }
+  if (game === "catchmind") {
+    return `
+      <div class="answer-panel">
+        <p class="label">제시어</p>
+        <p class="answer">${item.word}</p>
+        <p class="helper-text" data-relay-status></p>
       </div>
     `;
   }
@@ -437,8 +576,10 @@ function renderScreen() {
   screenRoot.innerHTML = `
     <div class="screen-room">방: ${room}</div>
     <div id="screenTimer" class="screen-counter"></div>
+    ${state.feedback ? `<div class="feedback-badge">${state.feedback}</div>` : ""}
     ${renderScreenItem(state.game, state.currentItem)}
   `;
+  setupCatchmindCanvas();
 }
 
 function renderScreenItem(game, item) {
@@ -449,15 +590,20 @@ function renderScreenItem(game, item) {
       <section class="screen-card">
         <p class="eyebrow">골든벨</p>
         <h1>${item.question}</h1>
+        ${currentState.revealAnswer ? `<p class="answer reveal-answer">${item.answer}</p>` : ""}
       </section>
     `;
   }
   if (game === "catchmind") {
     return `
-      <section class="screen-card">
+      <section class="catchmind-stage">
         <p class="eyebrow">캐치마인드</p>
-        <h1>그림을 맞혀보세요</h1>
-        <p class="screen-sub">${currentState.category}</p>
+        <h1>릴레이 그림</h1>
+        <p class="screen-sub" data-relay-status></p>
+        <canvas id="catchmindCanvas" class="draw-canvas" width="1100" height="620"></canvas>
+        <div class="canvas-tools">
+          <button type="button" class="secondary" data-action="clearCanvas">그림 지우기</button>
+        </div>
       </section>
     `;
   }
@@ -475,12 +621,65 @@ function render() {
   renderTimer();
 }
 
+function setupCatchmindCanvas() {
+  const canvas = document.querySelector("#catchmindCanvas");
+  if (!canvas || canvas.dataset.ready) return;
+  canvas.dataset.ready = "true";
+  const context = canvas.getContext("2d");
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.lineWidth = 8;
+  context.strokeStyle = "#172033";
+
+  let drawing = false;
+
+  function point(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
+      y: ((event.clientY - rect.top) / rect.height) * canvas.height,
+    };
+  }
+
+  canvas.addEventListener("pointerdown", (event) => {
+    drawing = true;
+    canvas.setPointerCapture(event.pointerId);
+    const p = point(event);
+    context.beginPath();
+    context.moveTo(p.x, p.y);
+  });
+
+  canvas.addEventListener("pointermove", (event) => {
+    if (!drawing) return;
+    const p = point(event);
+    context.lineTo(p.x, p.y);
+    context.stroke();
+  });
+
+  canvas.addEventListener("pointerup", () => {
+    drawing = false;
+  });
+
+  canvas.addEventListener("pointercancel", () => {
+    drawing = false;
+  });
+}
+
+function clearCatchmindCanvas() {
+  const canvas = document.querySelector("#catchmindCanvas");
+  if (!canvas) return;
+  canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+}
+
 function bindActions(root) {
   if (!root) return;
 
   root.addEventListener("input", (event) => {
     if (event.target.id === "durationInput") {
       currentState.duration = Number(event.target.value || 60);
+    }
+    if (event.target.id === "teamSizeInput") {
+      currentState.teamSize = Number(event.target.value || 4);
     }
   });
 
@@ -493,11 +692,15 @@ function bindActions(root) {
     if (action.startsWith("category:")) return chooseCategory(action.slice(9));
     if (action === "roulette") return openRoulette();
     if (action === "spinRoulette" && !currentState.rouletteSpinning) return spinRoulette();
+    if (action === "clearCanvas") return clearCatchmindCanvas();
     if (!isHost) return;
 
     if (action === "menu") return saveState({ ...defaultState, usedIds: currentState?.usedIds || {} });
     if (action === "setup") return saveState({ view: "setup", endAt: null });
     if (action === "start") return startRound();
+    if (action === "reveal") return toggleRevealAnswer();
+    if (action === "teamA") return addTeamScore("A");
+    if (action === "teamB") return addTeamScore("B");
     if (action === "correct") return markResult("correct");
     if (action === "pass") return markResult("pass");
     if (action === "finish") return finishRound();
