@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=20";
+import { games, packs } from "./game-data.js?v=21";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 20;
+const APP_VERSION = 21;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -26,6 +26,7 @@ let catchmindSnapshot = null;
 let catchmindHasInk = false;
 let audioContext = null;
 let timingBeatTimer = null;
+let lastWarningSecond = null;
 
 const defaultState = {
   appVersion: APP_VERSION,
@@ -149,6 +150,16 @@ function playEffect(name) {
     tone(494, now + 0.07, 0.08, { type: "triangle", volume: 0.12 });
   } else if (name === "tick") {
     tone(880, now, 0.045, { type: "square", volume: 0.075 });
+  } else if (name === "select") {
+    tone(660, now, 0.055, { type: "triangle", volume: 0.08 });
+  } else if (name === "next") {
+    tone(392, now, 0.055, { type: "sawtooth", volume: 0.08 });
+    tone(587, now + 0.045, 0.065, { type: "sawtooth", volume: 0.08 });
+  } else if (name === "reset") {
+    tone(262, now, 0.08, { type: "triangle", volume: 0.08 });
+    tone(196, now + 0.08, 0.1, { type: "triangle", volume: 0.075 });
+  } else if (name === "warning") {
+    tone(988, now, 0.04, { type: "square", volume: 0.06 });
   }
 }
 
@@ -234,6 +245,7 @@ async function saveState(nextState) {
 }
 
 async function resetRoom() {
+  playEffect("reset");
   await saveState(clone(defaultState));
 }
 
@@ -244,6 +256,7 @@ async function resetAllGameData() {
 }
 
 async function chooseGame(game) {
+  playEffect("select");
   await saveState({
     view: "setup",
     game,
@@ -273,10 +286,12 @@ async function chooseGame(game) {
 }
 
 async function chooseCategory(category) {
+  playEffect("select");
   await saveState({ category });
 }
 
 async function openRoulette() {
+  playEffect("select");
   const categories = getCategoryOptions(currentState.game);
   await saveState({
     view: "roulette",
@@ -324,6 +339,7 @@ async function spinRoulette() {
 }
 
 async function startRound() {
+  playEffect("start");
   if (currentState.game === "timing") {
     await saveState({
       view: "ready",
@@ -407,6 +423,7 @@ async function markResult(kind) {
 
 async function nextQuestion() {
   if (!currentState?.currentItem) return;
+  playEffect("next");
 
   const usedIds = clone(currentState.usedIds || {});
   const gameUsed = new Set(usedIds[currentState.game] || []);
@@ -443,12 +460,14 @@ async function revivalQuestion() {
 }
 
 async function resetUsed() {
+  playEffect("reset");
   const usedIds = clone(currentState.usedIds || {});
   usedIds[currentState.game] = [];
   await saveState({ usedIds });
 }
 
 async function resetQuietResults() {
+  playEffect("reset");
   await saveState({
     quietResults: [],
     quietCurrentLevel: 0,
@@ -627,6 +646,7 @@ async function stopTimingChallenge() {
 }
 
 async function resetTimingResults() {
+  playEffect("reset");
   await saveState({
     timingResults: [],
     timingName: "",
@@ -706,6 +726,16 @@ function renderTimer() {
   }
 
   updateCatchmindRelayLabels(state);
+
+  const warningSecond = Math.ceil(remaining / 1000);
+  if (state.view === "playing" && state.endAt && warningSecond > 0 && warningSecond <= 5) {
+    if (lastWarningSecond !== warningSecond) {
+      lastWarningSecond = warningSecond;
+      playEffect("warning");
+    }
+  } else {
+    lastWarningSecond = null;
+  }
 
   if (isHost && state.game === "catchmind" && state.view === "playing" && state.relayPhase === "drawing" && remaining <= 0) {
     finishCatchmindTurn();
