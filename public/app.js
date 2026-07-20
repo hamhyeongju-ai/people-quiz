@@ -13,7 +13,7 @@ const params = new URLSearchParams(window.location.search);
 const room = params.get("room") || "family";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 2;
+const APP_VERSION = 3;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -32,6 +32,8 @@ const defaultState = {
   endAt: null,
   usedIds: {},
   rouletteOptions: [],
+  rouletteSpinning: false,
+  rouletteRotation: 0,
   updatedAt: Date.now(),
 };
 
@@ -57,6 +59,12 @@ function formatTime(ms) {
 
 function itemId(game, item) {
   return `${game}:${item.name || item.word || item.question}`;
+}
+
+function getCategoryOptions(game) {
+  const categories = games[game]?.categories || [];
+  const filtered = categories.filter((category) => category !== "전체");
+  return filtered.length ? filtered : categories;
 }
 
 function getItems(game, category) {
@@ -109,6 +117,7 @@ async function chooseGame(game) {
     pass: 0,
     endAt: null,
     rouletteOptions: [],
+    rouletteSpinning: false,
   });
 }
 
@@ -116,11 +125,39 @@ async function chooseCategory(category) {
   await saveState({ category });
 }
 
-async function randomPersonCategory() {
-  const categories = games.person.categories.filter((category) => category !== "전체");
+async function openRoulette() {
+  const categories = getCategoryOptions(currentState.game);
+  await saveState({
+    view: "roulette",
+    rouletteOptions: categories,
+    rouletteSpinning: false,
+  });
+}
+
+async function spinRoulette() {
+  const categories = currentState.rouletteOptions?.length
+    ? currentState.rouletteOptions
+    : getCategoryOptions(currentState.game);
   const chosen = categories[Math.floor(Math.random() * categories.length)];
-  await saveState({ view: "roulette", game: "person", category: chosen, rouletteOptions: categories });
-  setTimeout(() => saveState({ view: "setup", category: chosen }), 1800);
+  const chosenIndex = categories.indexOf(chosen);
+  const segment = 360 / categories.length;
+  const targetAngle = 360 - (chosenIndex * segment + segment / 2);
+  const rotation = (currentState.rouletteRotation || 0) + 1440 + targetAngle + Math.floor(Math.random() * 16);
+
+  await saveState({
+    category: chosen,
+    rouletteOptions: categories,
+    rouletteRotation: rotation,
+    rouletteSpinning: true,
+  });
+
+  setTimeout(() => {
+    saveState({
+      view: "setup",
+      category: chosen,
+      rouletteSpinning: false,
+    });
+  }, 2900);
 }
 
 async function startRound() {
@@ -192,6 +229,38 @@ function gameCards(mode) {
     .join("");
 }
 
+function categoryButtons(game, selected) {
+  const categoryList = games[game].categories
+    .map((category) => {
+      const active = category === selected ? "active" : "";
+      return `<button type="button" class="chip ${active}" data-action="category:${category}">${category}</button>`;
+    })
+    .join("");
+
+  return `${categoryList}<button type="button" class="chip random-chip" data-action="roulette">랜덤으로 돌리기</button>`;
+}
+
+function renderRouletteWheel(state, includeButton) {
+  const options = state.rouletteOptions || [];
+  const style = `--count:${options.length}; --rotation:${state.rouletteRotation || 0}deg;`;
+
+  return `
+    <div class="wheel-wrap">
+      <div class="wheel-pointer"></div>
+      <div class="wheel ${state.rouletteSpinning ? "spinning" : ""}" style="${style}">
+        ${options
+          .map((category, index) => {
+            const angle = (360 / options.length) * index;
+            return `<span style="--angle:${angle}deg">${category}</span>`;
+          })
+          .join("")}
+      </div>
+    </div>
+    <p class="answer small-answer">${state.rouletteSpinning ? "돌아가는 중..." : state.category || "랜덤 선택"}</p>
+    ${includeButton ? button(state.rouletteSpinning ? "돌아가는 중" : "휙 돌리기", "primary wheel-button", "spinRoulette") : ""}
+  `;
+}
+
 function renderHost() {
   const state = currentState || defaultState;
   if (!hostRoot) return;
@@ -201,7 +270,7 @@ function renderHost() {
     hostRoot.innerHTML = `
       <section class="notice-panel">
         <p class="label">게임 선택 대기</p>
-        <p class="helper-text">갤럭시탭 참가자 화면에서도 게임을 고를 수 있습니다.</p>
+        <p class="helper-text">갤럭시탭 참가자 화면에서 게임을 고르면 이 화면도 같이 넘어갑니다.</p>
       </section>
       <section class="game-grid">${gameCards("host")}</section>
     `;
@@ -211,11 +280,8 @@ function renderHost() {
   if (state.view === "roulette") {
     hostRoot.innerHTML = `
       <section class="roulette-panel">
-        <p class="label">랜덤 카테고리 선택 중</p>
-        <div class="roulette-track">
-          ${(state.rouletteOptions || []).map((category) => `<span class="${category === state.category ? "picked" : ""}">${category}</span>`).join("")}
-        </div>
-        <p class="answer small-answer">${state.category}</p>
+        <p class="label">랜덤 카테고리 회전판</p>
+        ${renderRouletteWheel(state, true)}
       </section>
     `;
     return;
@@ -229,11 +295,11 @@ function renderHost() {
       <section class="setup-panel">
         <div class="setup-head">
           <button type="button" class="secondary" data-action="menu">← 게임 선택</button>
-          ${state.game === "person" ? button("랜덤 카테고리", "primary", "roulette") : ""}
+          ${button("랜덤 회전판", "primary", "roulette")}
         </div>
         <p class="label">카테고리</p>
         <div class="chip-row">
-          ${game.categories.map((category) => `<button type="button" class="chip ${category === state.category ? "active" : ""}" data-action="category:${category}">${category}</button>`).join("")}
+          ${categoryButtons(state.game, state.category)}
         </div>
         <label class="field">
           <span>타이머 초</span>
@@ -325,10 +391,14 @@ function renderScreen() {
   if (state.view === "setup") {
     screenRoot.innerHTML = `
       <div class="screen-room">방: ${room}</div>
-      <section class="screen-card">
-        <p class="eyebrow">선택 완료</p>
+      <section class="screen-menu">
+        <p class="eyebrow">카테고리 선택</p>
         <h1>${games[state.game].title}</h1>
-        <p class="screen-sub">진행자가 카테고리와 시간을 준비하고 있어요</p>
+        <p class="screen-sub">참가자들이 카테고리를 골라주세요</p>
+        <div class="chip-row screen-chip-row">
+          ${categoryButtons(state.game, state.category)}
+        </div>
+        <p class="helper-text">선택 후 아이폰 진행자 화면에서 타이머를 맞추고 시작하면 됩니다.</p>
       </section>
     `;
     return;
@@ -338,11 +408,9 @@ function renderScreen() {
     screenRoot.innerHTML = `
       <div class="screen-room">방: ${room}</div>
       <section class="screen-card">
-        <p class="eyebrow">인물퀴즈</p>
-        <h1>카테고리 뽑는 중</h1>
-        <div class="roulette-track big">
-          ${(state.rouletteOptions || []).map((category) => `<span>${category}</span>`).join("")}
-        </div>
+        <p class="eyebrow">${games[state.game].title}</p>
+        <h1>돌려돌려 회전판</h1>
+        ${renderRouletteWheel(state, true)}
       </section>
     `;
     return;
@@ -416,12 +484,13 @@ function bindActions(root) {
 
     const action = target.dataset.action;
     if (action.startsWith("game:")) return chooseGame(action.slice(5));
+    if (action.startsWith("category:")) return chooseCategory(action.slice(9));
+    if (action === "roulette") return openRoulette();
+    if (action === "spinRoulette" && !currentState.rouletteSpinning) return spinRoulette();
     if (!isHost) return;
 
-    if (action.startsWith("category:")) return chooseCategory(action.slice(9));
     if (action === "menu") return saveState({ ...defaultState, usedIds: currentState?.usedIds || {} });
     if (action === "setup") return saveState({ view: "setup", endAt: null });
-    if (action === "roulette") return randomPersonCategory();
     if (action === "start") return startRound();
     if (action === "correct") return markResult("correct");
     if (action === "pass") return markResult("pass");

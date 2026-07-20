@@ -181,6 +181,11 @@ h1 {
   color: #ffffff;
 }
 
+.random-chip {
+  background: #fff3db;
+  color: #a34d00;
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -283,6 +288,87 @@ h1 {
   color: #ffffff;
 }
 
+.wheel-wrap {
+  display: grid;
+  margin: 18px auto;
+  max-width: min(70vw, 420px);
+  place-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.wheel-wrap::before {
+  content: "";
+  display: block;
+  padding-top: 100%;
+}
+
+.wheel {
+  align-items: center;
+  background:
+    conic-gradient(
+      from -90deg,
+      #dbeafe 0deg 45deg,
+      #fef3c7 45deg 90deg,
+      #dcfce7 90deg 135deg,
+      #fee2e2 135deg 180deg,
+      #ede9fe 180deg 225deg,
+      #cffafe 225deg 270deg,
+      #fce7f3 270deg 315deg,
+      #e0f2fe 315deg 360deg
+    );
+  border: 10px solid #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 16px 38px rgba(26, 45, 75, 0.18);
+  display: grid;
+  inset: 0;
+  justify-items: center;
+  position: absolute;
+  transform: rotate(var(--rotation));
+  transition: transform 2.8s cubic-bezier(0.12, 0.72, 0.16, 1);
+}
+
+.wheel::after {
+  background: #ffffff;
+  border: 1px solid #d9e2ef;
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(26, 45, 75, 0.15);
+  content: "";
+  height: 22%;
+  position: absolute;
+  width: 22%;
+}
+
+.wheel span {
+  color: #10213d;
+  font-size: clamp(12px, 2.4vw, 17px);
+  font-weight: 950;
+  left: 50%;
+  position: absolute;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.72);
+  top: 50%;
+  transform: rotate(var(--angle)) translateY(-42%) translateX(-50%) translateY(-140px) rotate(calc(-1 * var(--angle)));
+  transform-origin: 0 0;
+  width: 90px;
+}
+
+.wheel-pointer {
+  border-left: 18px solid transparent;
+  border-right: 18px solid transparent;
+  border-top: 30px solid #ef7d00;
+  filter: drop-shadow(0 6px 8px rgba(26, 45, 75, 0.2));
+  position: absolute;
+  top: -8px;
+  z-index: 2;
+}
+
+.wheel-button {
+  margin: 0 auto;
+  max-width: 320px;
+  width: 100%;
+}
+
 .screen {
   background: #f7f9fc;
   overflow: hidden;
@@ -314,6 +400,16 @@ h1 {
 
 .screen-game-grid {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.screen-chip-row {
+  justify-content: center;
+}
+
+.screen-chip-row .chip {
+  font-size: clamp(18px, 3vw, 28px);
+  min-height: 64px;
+  padding: 0 24px;
 }
 
 .screen-card {
@@ -376,5 +472,9 @@ h1 {
 
   .status-stack {
     justify-items: start;
+  }
+
+  .wheel span {
+    transform: rotate(var(--angle)) translateY(-42%) translateX(-50%) translateY(-34vw) rotate(calc(-1 * var(--angle)));
   }
 }
