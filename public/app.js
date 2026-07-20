@@ -161,7 +161,7 @@ async function spinRoulette() {
       category: chosen,
       rouletteSpinning: false,
     });
-  }, 3800);
+  }, 3000);
 }
 
 async function startRound() {
@@ -241,29 +241,27 @@ function categoryButtons(game, selected) {
     })
     .join("");
 
-  return `${categoryList}<button type="button" class="chip random-chip" data-action="roulette">랜덤으로 돌리기</button>`;
+  return `${categoryList}<button type="button" class="chip random-chip" data-action="roulette">랜덤 추첨</button>`;
 }
 
-function renderRouletteWheel(state, includeButton) {
+function renderCategoryDraw(state, includeButton) {
   const options = state.rouletteOptions || [];
-  const style = `--count:${options.length}; --start-rotation:${state.rouletteStartRotation || 0}deg; --rotation:${state.rouletteRotation || 0}deg;`;
+  const displayOptions = state.rouletteSpinning || !state.category
+    ? options.concat(options, options)
+    : [state.category];
 
   return `
-    <div class="wheel-wrap">
-      <div class="wheel-pointer"></div>
-      <div class="wheel ${state.rouletteSpinning ? "spinning" : ""}" style="${style}">
-        ${options
-          .map((category, index) => {
-            const angle = (360 / options.length) * index;
-            return `<span style="--angle:${angle}deg">${category}</span>`;
-          })
+    <div class="draw-box ${state.rouletteSpinning ? "drawing" : ""}">
+      <div class="draw-strip">
+        ${displayOptions
+          .map((category) => `<span class="${category === state.category ? "selected" : ""}">${category}</span>`)
           .join("")}
       </div>
     </div>
-    <p class="answer small-answer">${state.rouletteSpinning ? "돌아가는 중..." : state.category || "랜덤 선택"}</p>
+    <p class="answer small-answer">${state.rouletteSpinning ? "추첨 중..." : state.category || "랜덤 선택"}</p>
     ${
       includeButton
-        ? `<button type="button" class="start-button wheel-button" data-action="spinRoulette" ${state.rouletteSpinning ? "disabled" : ""}>START</button>`
+        ? `<button type="button" class="start-button draw-button" data-action="spinRoulette" ${state.rouletteSpinning ? "disabled" : ""}>START</button>`
         : ""
     }
   `;
@@ -288,8 +286,8 @@ function renderHost() {
   if (state.view === "roulette") {
     hostRoot.innerHTML = `
       <section class="roulette-panel">
-        <p class="label">랜덤 카테고리 회전판</p>
-        ${renderRouletteWheel(state, true)}
+        <p class="label">랜덤 카테고리 추첨</p>
+        ${renderCategoryDraw(state, true)}
       </section>
     `;
     return;
@@ -303,7 +301,7 @@ function renderHost() {
       <section class="setup-panel">
         <div class="setup-head">
           <button type="button" class="secondary" data-action="menu">← 게임 선택</button>
-          ${button("랜덤 회전판", "primary", "roulette")}
+          ${button("랜덤 추첨", "primary", "roulette")}
         </div>
         <p class="label">카테고리</p>
         <div class="chip-row">
@@ -417,8 +415,8 @@ function renderScreen() {
       <div class="screen-room">방: ${room}</div>
       <section class="screen-card">
         <p class="eyebrow">${games[state.game].title}</p>
-        <h1>돌려돌려 회전판</h1>
-        ${renderRouletteWheel(state, true)}
+        <h1>카테고리 추첨</h1>
+        ${renderCategoryDraw(state, true)}
       </section>
     `;
     return;
