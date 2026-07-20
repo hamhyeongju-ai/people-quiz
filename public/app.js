@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=12";
+import { games, packs } from "./game-data.js?v=13";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 12;
+const APP_VERSION = 13;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -118,6 +118,12 @@ async function saveState(nextState) {
 
 async function resetRoom() {
   await saveState(clone(defaultState));
+}
+
+async function resetAllGameData() {
+  const confirmed = window.confirm("테스트 기록과 사용한 문제 기록을 모두 지우고 처음 화면으로 돌아갈까요?");
+  if (!confirmed) return;
+  await resetRoom();
 }
 
 async function chooseGame(game) {
@@ -811,7 +817,7 @@ async function setupRealtime() {
 }
 
 bindActions(hostRoot || screenRoot);
-if (homeButton) homeButton.addEventListener("click", resetRoom);
+if (homeButton) homeButton.addEventListener("click", resetAllGameData);
 loadPeople()
   .then(setupRealtime)
   .then(() => {
