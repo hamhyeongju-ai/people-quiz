@@ -262,6 +262,20 @@ h1 {
   color: #ffffff;
 }
 
+.start-button {
+  background: #dc2626;
+  box-shadow: 0 14px 28px rgba(220, 38, 38, 0.24);
+  color: #ffffff;
+  font-size: clamp(26px, 5vw, 44px);
+  letter-spacing: 0.08em;
+  min-height: 78px;
+}
+
+.start-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .helper-text {
   font-size: 15px;
   line-height: 1.5;

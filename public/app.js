@@ -257,7 +257,11 @@ function renderRouletteWheel(state, includeButton) {
       </div>
     </div>
     <p class="answer small-answer">${state.rouletteSpinning ? "돌아가는 중..." : state.category || "랜덤 선택"}</p>
-    ${includeButton ? button(state.rouletteSpinning ? "돌아가는 중" : "휙 돌리기", "primary wheel-button", "spinRoulette") : ""}
+    ${
+      includeButton
+        ? `<button type="button" class="start-button wheel-button" data-action="spinRoulette" ${state.rouletteSpinning ? "disabled" : ""}>START</button>`
+        : ""
+    }
   `;
 }
 
