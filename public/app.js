@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=21";
+import { games, packs } from "./game-data.js?v=22";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 21;
+const APP_VERSION = 22;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -211,6 +211,11 @@ function getItems(game, category) {
 
   if (game === "goldenbell") {
     return (packs.goldenbell?.["전체"] || []).map((item) => ({ ...item, name: item.question }));
+  }
+
+  if (game === "initials") {
+    const categoryPack = packs.initials?.[category] || [];
+    return categoryPack.map((item) => ({ ...item, word: item.initials, name: item.answer }));
   }
 
   const categoryPack = packs[game]?.[category] || [];
@@ -1196,6 +1201,16 @@ function renderHostItem(game, item) {
       </div>
     `;
   }
+  if (game === "initials") {
+    return `
+      <div class="answer-panel">
+        <p class="label">초성</p>
+        <p class="answer initials-answer">${item.initials}</p>
+        <p class="label">정답</p>
+        <p class="answer small-answer">${item.answer}</p>
+      </div>
+    `;
+  }
   return `
     <div class="answer-panel">
       <p class="label">제시어</p>
@@ -1443,6 +1458,14 @@ function renderScreenItem(game, item) {
         <div class="canvas-tools">
           <button type="button" class="secondary" data-action="clearCanvas">그림 지우기</button>
         </div>
+      </section>
+    `;
+  }
+  if (game === "initials") {
+    return `
+      <section class="screen-card initials-screen">
+        <p class="eyebrow">${games[game].title}</p>
+        <h1>${item.initials}</h1>
       </section>
     `;
   }
