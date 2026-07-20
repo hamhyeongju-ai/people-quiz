@@ -29,8 +29,6 @@ const defaultState = {
   currentItem: null,
   score: 0,
   pass: 0,
-  teamA: 0,
-  teamB: 0,
   revealAnswer: false,
   feedback: null,
   endAt: null,
@@ -244,13 +242,25 @@ async function markResult(kind) {
   }, 900);
 }
 
-async function toggleRevealAnswer() {
-  await saveState({ revealAnswer: !currentState.revealAnswer });
+async function nextQuestion() {
+  if (!currentState?.currentItem) return;
+
+  const usedIds = clone(currentState.usedIds || {});
+  const gameUsed = new Set(usedIds[currentState.game] || []);
+  gameUsed.add(itemId(currentState.game, currentState.currentItem));
+  usedIds[currentState.game] = Array.from(gameUsed);
+
+  const { item, usedIds: nextUsedIds } = getUnusedItem({ ...currentState, usedIds });
+  await saveState({
+    currentItem: item,
+    usedIds: nextUsedIds,
+    revealAnswer: false,
+    feedback: null,
+  });
 }
 
-async function addTeamScore(team) {
-  const key = team === "A" ? "teamA" : "teamB";
-  await saveState({ [key]: (currentState[key] || 0) + 1 });
+async function toggleRevealAnswer() {
+  await saveState({ revealAnswer: !currentState.revealAnswer });
 }
 
 async function resetUsed() {
@@ -274,7 +284,9 @@ function renderTimer() {
     else screenTimer.textContent = state.view === "playing" ? formatTime(remaining) : "";
   }
   if (scoreLabel) {
-    scoreLabel.textContent = `정답 ${state.score || 0} · 패스 ${state.pass || 0} · A ${state.teamA || 0} : B ${state.teamB || 0}`;
+    scoreLabel.textContent = state.game === "goldenbell"
+      ? "생존형 골든벨"
+      : `정답 ${state.score || 0} · 패스 ${state.pass || 0}`;
   }
 
   updateCatchmindRelayLabels(state);
@@ -454,16 +466,7 @@ function renderHost() {
   if (state.view === "playing") {
     hostRoot.innerHTML = `
       <section class="stage">${renderHostItem(state.game, state.currentItem)}</section>
-      <nav class="controls">
-        ${state.game === "goldenbell" ? button(state.revealAnswer ? "정답 숨기기" : "정답 공개", "primary", "reveal") : ""}
-        ${button("정답", "primary", "correct")}
-        ${button("패스", "secondary", "pass")}
-        ${button("종료", "danger", "finish")}
-      </nav>
-      <nav class="controls">
-        ${button("A팀 +1", "secondary", "teamA")}
-        ${button("B팀 +1", "secondary", "teamB")}
-      </nav>
+      ${renderHostControls(state)}
     `;
     return;
   }
@@ -485,8 +488,8 @@ function renderHost() {
     hostRoot.innerHTML = `
       <section class="result-panel">
         <p class="label">게임 종료</p>
-        <p class="answer">${state.score || 0}개 정답</p>
-        <p class="helper-text">패스 ${state.pass || 0}개 · A팀 ${state.teamA || 0}점 · B팀 ${state.teamB || 0}점</p>
+        <p class="answer">${state.game === "goldenbell" ? "골든벨 종료" : `${state.score || 0}개 정답`}</p>
+        <p class="helper-text">${state.game === "goldenbell" ? "골든벨 종료" : `패스 ${state.pass || 0}개`}</p>
         <div class="controls">
           ${button("다시 하기", "primary", "start")}
           ${button("설정으로", "secondary", "setup")}
@@ -495,6 +498,26 @@ function renderHost() {
       </section>
     `;
   }
+}
+
+function renderHostControls(state) {
+  if (state.game === "goldenbell") {
+    return `
+      <nav class="controls">
+        ${button(state.revealAnswer ? "정답 숨기기" : "정답 공개", "primary", "reveal")}
+        ${button("다음 문제", "secondary", "nextQuestion")}
+        ${button("종료", "danger", "finish")}
+      </nav>
+    `;
+  }
+
+  return `
+    <nav class="controls">
+      ${button("정답", "primary", "correct")}
+      ${button("패스", "secondary", "pass")}
+      ${button("종료", "danger", "finish")}
+    </nav>
+  `;
 }
 
 function renderHostItem(game, item) {
@@ -597,8 +620,8 @@ function renderScreen() {
       <div class="screen-room">방: ${room}</div>
       <section class="screen-card">
         <p class="eyebrow">게임 종료</p>
-        <h1>${state.score || 0}개 정답</h1>
-        <p class="screen-sub">패스 ${state.pass || 0}개</p>
+        <h1>${state.game === "goldenbell" ? "골든벨 종료" : `${state.score || 0}개 정답`}</h1>
+        <p class="screen-sub">${state.game === "goldenbell" ? "수고하셨습니다" : `패스 ${state.pass || 0}개`}</p>
       </section>
     `;
     return;
@@ -730,8 +753,7 @@ function bindActions(root) {
     if (action === "setup") return saveState({ view: "setup", endAt: null });
     if (action === "start") return startRound();
     if (action === "reveal") return toggleRevealAnswer();
-    if (action === "teamA") return addTeamScore("A");
-    if (action === "teamB") return addTeamScore("B");
+    if (action === "nextQuestion") return nextQuestion();
     if (action === "correct") return markResult("correct");
     if (action === "pass") return markResult("pass");
     if (action === "finish") return finishRound();
