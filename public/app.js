@@ -34,6 +34,7 @@ const defaultState = {
   rouletteOptions: [],
   rouletteSpinning: false,
   rouletteRotation: 0,
+  rouletteStartRotation: 0,
   updatedAt: Date.now(),
 };
 
@@ -131,6 +132,7 @@ async function openRoulette() {
     view: "roulette",
     rouletteOptions: categories,
     rouletteSpinning: false,
+    rouletteStartRotation: currentState.rouletteRotation || 0,
   });
 }
 
@@ -142,11 +144,13 @@ async function spinRoulette() {
   const chosenIndex = categories.indexOf(chosen);
   const segment = 360 / categories.length;
   const targetAngle = 360 - (chosenIndex * segment + segment / 2);
-  const rotation = (currentState.rouletteRotation || 0) + 1440 + targetAngle + Math.floor(Math.random() * 16);
+  const startRotation = currentState.rouletteRotation || 0;
+  const rotation = startRotation + 1800 + targetAngle + Math.floor(Math.random() * 16);
 
   await saveState({
     category: chosen,
     rouletteOptions: categories,
+    rouletteStartRotation: startRotation,
     rouletteRotation: rotation,
     rouletteSpinning: true,
   });
@@ -157,7 +161,7 @@ async function spinRoulette() {
       category: chosen,
       rouletteSpinning: false,
     });
-  }, 2900);
+  }, 3800);
 }
 
 async function startRound() {
@@ -242,7 +246,7 @@ function categoryButtons(game, selected) {
 
 function renderRouletteWheel(state, includeButton) {
   const options = state.rouletteOptions || [];
-  const style = `--count:${options.length}; --rotation:${state.rouletteRotation || 0}deg;`;
+  const style = `--count:${options.length}; --start-rotation:${state.rouletteStartRotation || 0}deg; --rotation:${state.rouletteRotation || 0}deg;`;
 
   return `
     <div class="wheel-wrap">

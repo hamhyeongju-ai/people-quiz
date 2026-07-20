@@ -339,7 +339,10 @@ h1 {
   justify-items: center;
   position: absolute;
   transform: rotate(var(--rotation));
-  transition: transform 2.8s cubic-bezier(0.12, 0.72, 0.16, 1);
+}
+
+.wheel.spinning {
+  animation: wheel-spin 3.6s cubic-bezier(0.12, 0.74, 0.12, 1) forwards;
 }
 
 .wheel::after {
@@ -471,6 +474,15 @@ h1 {
   }
   to {
     transform: translateY(-6px);
+  }
+}
+
+@keyframes wheel-spin {
+  from {
+    transform: rotate(var(--start-rotation));
+  }
+  to {
+    transform: rotate(var(--rotation));
   }
 }
 
