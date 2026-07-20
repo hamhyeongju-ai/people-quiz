@@ -229,6 +229,99 @@ h1 {
   padding: 0 14px;
 }
 
+.quiet-name-field {
+  margin: 0 auto;
+  max-width: 420px;
+  text-align: left;
+  width: 100%;
+}
+
+.quiet-panel,
+.quiet-screen {
+  justify-items: stretch;
+}
+
+.quiet-screen {
+  max-width: 1000px;
+  width: min(94vw, 1000px);
+}
+
+.quiet-meter {
+  background: #e8edf5;
+  border: 1px solid #c9d3e2;
+  border-radius: 8px;
+  height: 46px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.quiet-meter-fill {
+  background: linear-gradient(90deg, #22c55e, #f59e0b, #dc2626);
+  height: 100%;
+  transition: width 0.16s ease-out;
+}
+
+.quiet-numbers {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.quiet-numbers div {
+  background: #f7f9fc;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+}
+
+.quiet-numbers span {
+  color: #637083;
+  font-weight: 900;
+}
+
+.quiet-numbers strong {
+  color: #101827;
+  font-size: clamp(36px, 8vw, 82px);
+  line-height: 1;
+}
+
+.quiet-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.quiet-list li {
+  align-items: center;
+  background: #f7f9fc;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.quiet-list span,
+.quiet-list strong {
+  font-size: clamp(18px, 3vw, 28px);
+  font-weight: 950;
+}
+
+.quiet-stop-button {
+  font-size: clamp(24px, 5vw, 42px);
+  min-height: 76px;
+}
+
+.section-title {
+  font-size: clamp(22px, 4vw, 34px);
+  margin: 0;
+}
+
 .stage {
   display: grid;
   gap: 16px;

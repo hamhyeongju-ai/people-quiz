@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=16";
+import { games, packs } from "./game-data.js?v=17";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,12 +15,13 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 16;
+const APP_VERSION = 17;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
 let people = [];
 let tickTimer = null;
+let quietMeter = null;
 
 const defaultState = {
   appVersion: APP_VERSION,
@@ -43,6 +44,11 @@ const defaultState = {
   rouletteSpinning: false,
   rouletteRotation: 0,
   rouletteStartRotation: 0,
+  quietName: "",
+  quietCurrentLevel: 0,
+  quietPeakLevel: 0,
+  quietResults: [],
+  quietError: null,
   updatedAt: Date.now(),
 };
 
@@ -58,6 +64,15 @@ const personCategoryMap = {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function formatTime(ms) {
@@ -78,6 +93,8 @@ function getCategoryOptions(game) {
 }
 
 function getItems(game, category) {
+  if (game === "quiet") return [];
+
   if (game === "person") {
     if (!category || category === "전체") return people;
     const names = personCategoryMap[category] || [];
@@ -145,6 +162,10 @@ async function chooseGame(game) {
     rouletteOptions: [],
     rouletteSpinning: false,
     relayStartedAt: null,
+    quietName: "",
+    quietCurrentLevel: 0,
+    quietPeakLevel: 0,
+    quietError: null,
   });
 }
 
@@ -299,6 +320,120 @@ async function resetUsed() {
   await saveState({ usedIds });
 }
 
+async function resetQuietResults() {
+  await saveState({
+    quietResults: [],
+    quietCurrentLevel: 0,
+    quietPeakLevel: 0,
+    quietName: "",
+    quietError: null,
+  });
+}
+
+function stopQuietMeterStream() {
+  if (!quietMeter) return;
+  if (quietMeter.animationId) cancelAnimationFrame(quietMeter.animationId);
+  quietMeter.stream?.getTracks().forEach((track) => track.stop());
+  quietMeter.audioContext?.close();
+  quietMeter = null;
+}
+
+async function startQuietMeter() {
+  if (!screenRoot) return;
+  const input = document.querySelector("#quietNameInput");
+  const name = (input?.value || currentState.quietName || "").trim() || `도전자 ${(currentState.quietResults || []).length + 1}`;
+
+  stopQuietMeterStream();
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    await saveState({ quietError: "이 브라우저에서는 마이크 측정을 사용할 수 없습니다." });
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    const audioContext = new AudioContextClass();
+    const analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaStreamSource(stream);
+    analyser.fftSize = 1024;
+    source.connect(analyser);
+
+    const data = new Uint8Array(analyser.fftSize);
+    quietMeter = {
+      stream,
+      audioContext,
+      analyser,
+      data,
+      peak: 0,
+      lastPush: 0,
+      animationId: null,
+    };
+
+    await saveState({
+      view: "playing",
+      quietName: name,
+      quietCurrentLevel: 0,
+      quietPeakLevel: 0,
+      quietError: null,
+      endAt: null,
+    });
+
+    const measure = async () => {
+      if (!quietMeter || currentState?.game !== "quiet" || currentState?.view !== "playing") {
+        stopQuietMeterStream();
+        return;
+      }
+
+      quietMeter.analyser.getByteTimeDomainData(quietMeter.data);
+      let sum = 0;
+      for (const value of quietMeter.data) {
+        const centered = (value - 128) / 128;
+        sum += centered * centered;
+      }
+      const rms = Math.sqrt(sum / quietMeter.data.length);
+      const level = Math.max(0, Math.min(100, 20 * Math.log10(rms || 0.00001) + 100));
+      quietMeter.peak = Math.max(quietMeter.peak, level);
+
+      const now = Date.now();
+      if (now - quietMeter.lastPush > 220) {
+        quietMeter.lastPush = now;
+        await saveState({
+          quietCurrentLevel: Number(level.toFixed(1)),
+          quietPeakLevel: Number(quietMeter.peak.toFixed(1)),
+        });
+      }
+
+      if (quietMeter) quietMeter.animationId = requestAnimationFrame(measure);
+    };
+
+    quietMeter.animationId = requestAnimationFrame(measure);
+  } catch (error) {
+    await saveState({
+      quietError: "마이크 권한이 필요합니다. 허용 후 다시 시작해주세요.",
+    });
+  }
+}
+
+async function stopQuietMeter() {
+  const peak = Number(currentState.quietPeakLevel || quietMeter?.peak || 0);
+  const name = currentState.quietName || `도전자 ${(currentState.quietResults || []).length + 1}`;
+  const results = clone(currentState.quietResults || []);
+  results.push({
+    name,
+    peak,
+    at: Date.now(),
+  });
+  stopQuietMeterStream();
+  await saveState({
+    view: "result",
+    quietResults: results,
+    quietCurrentLevel: 0,
+    quietPeakLevel: peak,
+    quietError: null,
+  });
+}
+
 function renderTimer() {
   const state = currentState || defaultState;
   const remaining = state.endAt ? state.endAt - Date.now() : 0;
@@ -314,7 +449,9 @@ function renderTimer() {
   if (scoreLabel) {
     scoreLabel.textContent = state.game === "goldenbell"
       ? "생존형 골든벨"
-      : `정답 ${state.score || 0} · 패스 ${state.pass || 0}`;
+      : state.game === "quiet"
+        ? `기록 ${state.quietResults?.length || 0}명`
+        : `정답 ${state.score || 0} · 패스 ${state.pass || 0}`;
   }
 
   updateCatchmindRelayLabels(state);
@@ -407,6 +544,47 @@ function renderCategoryDraw(state, includeButton) {
   `;
 }
 
+function quietRankings(results = []) {
+  return [...results].sort((a, b) => a.peak - b.peak);
+}
+
+function renderQuietLeaderboard(results = []) {
+  if (!results.length) return `<p class="helper-text">아직 기록이 없습니다.</p>`;
+  return `
+    <ol class="quiet-list">
+      ${quietRankings(results)
+        .map(
+          (result, index) => `
+            <li>
+              <span>${index + 1}. ${escapeHtml(result.name)}</span>
+              <strong>${result.peak.toFixed(1)} dB</strong>
+            </li>
+          `,
+        )
+        .join("")}
+    </ol>
+  `;
+}
+
+function renderQuietGauge(level = 0, peak = 0) {
+  const capped = Math.min(100, Math.max(0, peak));
+  return `
+    <div class="quiet-meter">
+      <div class="quiet-meter-fill" style="width: ${capped}%"></div>
+    </div>
+    <div class="quiet-numbers">
+      <div>
+        <span>현재</span>
+        <strong>${Number(level || 0).toFixed(1)} dB</strong>
+      </div>
+      <div>
+        <span>최고</span>
+        <strong>${Number(peak || 0).toFixed(1)} dB</strong>
+      </div>
+    </div>
+  `;
+}
+
 function renderHost() {
   const state = currentState || defaultState;
   if (!hostRoot) return;
@@ -445,6 +623,23 @@ function renderHost() {
   }
 
   if (state.view === "setup") {
+    if (state.game === "quiet") {
+      hostRoot.innerHTML = `
+        <section class="setup-panel quiet-panel">
+          <div class="setup-head">
+            <button type="button" class="secondary" data-action="menu">← 게임 선택</button>
+            ${button("기록 초기화", "danger", "quietReset")}
+          </div>
+          <p class="label">조용히 먹기 준비</p>
+          <h1>갤럭시탭에서 도전자 이름을 입력하고 측정 시작</h1>
+          <p class="helper-text">마이크 권한이 필요해서 측정 시작은 갤럭시탭 참가자 화면에서 누릅니다. 최고 소리 기록이 낮은 사람이 이깁니다.</p>
+          <h2 class="section-title">현재 순위</h2>
+          ${renderQuietLeaderboard(state.quietResults)}
+        </section>
+      `;
+      return;
+    }
+
     const game = games[state.game];
     const items = getItems(state.game, state.category);
     const usedCount = (state.usedIds?.[state.game] || []).length;
@@ -488,6 +683,18 @@ function renderHost() {
   }
 
   if (state.view === "ready") {
+    if (state.game === "quiet") {
+      hostRoot.innerHTML = `
+        <section class="result-panel quiet-panel">
+          <p class="label">조용히 먹기</p>
+          <h1>갤럭시탭에서 측정을 시작하세요</h1>
+          <p class="helper-text">도전자 이름을 입력하고 과자를 먹기 직전에 측정 시작을 누르면 됩니다.</p>
+          ${renderQuietLeaderboard(state.quietResults)}
+        </section>
+      `;
+      return;
+    }
+
     hostRoot.innerHTML = `
       <section class="result-panel">
         <p class="label">문제 준비 완료</p>
@@ -499,6 +706,22 @@ function renderHost() {
   }
 
   if (state.view === "playing") {
+    if (state.game === "quiet") {
+      hostRoot.innerHTML = `
+        <section class="answer-panel quiet-panel">
+          <p class="label">측정 중</p>
+          <h1>${escapeHtml(state.quietName || "도전자")}</h1>
+          ${renderQuietGauge(state.quietCurrentLevel, state.quietPeakLevel)}
+          <p class="helper-text">갤럭시탭에서 측정 종료를 누르면 기록이 순위표에 저장됩니다.</p>
+        </section>
+        <section class="result-panel quiet-panel">
+          <h2 class="section-title">현재 순위</h2>
+          ${renderQuietLeaderboard(state.quietResults)}
+        </section>
+      `;
+      return;
+    }
+
     hostRoot.innerHTML = `
       <section class="stage">${renderHostItem(state.game, state.currentItem)}</section>
       ${renderHostControls(state)}
@@ -507,6 +730,22 @@ function renderHost() {
   }
 
   if (state.view === "result") {
+    if (state.game === "quiet") {
+      hostRoot.innerHTML = `
+        <section class="result-panel quiet-panel">
+          <p class="label">조용히 먹기 결과</p>
+          <h1>순위표</h1>
+          ${renderQuietLeaderboard(state.quietResults)}
+          <div class="controls">
+            ${button("다음 도전자", "primary", "setup")}
+            ${button("기록 초기화", "danger", "quietReset")}
+            ${button("게임 선택", "secondary", "menu")}
+          </div>
+        </section>
+      `;
+      return;
+    }
+
     hostRoot.innerHTML = `
       <section class="result-panel">
         <p class="label">게임 종료</p>
@@ -599,6 +838,24 @@ function renderScreen() {
   }
 
   if (state.view === "setup") {
+    if (state.game === "quiet") {
+      screenRoot.innerHTML = `
+        <div class="screen-room">방: ${room}</div>
+        <section class="screen-card quiet-screen">
+          <p class="eyebrow">조용히 먹기</p>
+          <h1>과자 준비</h1>
+          <label class="field quiet-name-field">
+            <span>도전자 이름</span>
+            <input id="quietNameInput" type="text" maxlength="12" value="${escapeHtml(state.quietName || "")}" placeholder="예: 1번 도전자" />
+          </label>
+          <button type="button" class="start-button" data-action="quietStart">측정 시작</button>
+          <p class="screen-sub">마이크 권한을 허용해주세요</p>
+          ${renderQuietLeaderboard(state.quietResults)}
+        </section>
+      `;
+      return;
+    }
+
     const isGoldenbell = state.game === "goldenbell";
     screenRoot.innerHTML = `
       <div class="screen-room">방: ${room}</div>
@@ -644,6 +901,19 @@ function renderScreen() {
   }
 
   if (state.view === "ready") {
+    if (state.game === "quiet") {
+      screenRoot.innerHTML = `
+        <div class="screen-room">방: ${room}</div>
+        <section class="screen-card quiet-screen">
+          <p class="eyebrow">조용히 먹기</p>
+          <h1>측정 준비</h1>
+          <button type="button" class="start-button" data-action="quietStart">측정 시작</button>
+          <p class="screen-sub">과자를 먹기 직전에 눌러주세요</p>
+        </section>
+      `;
+      return;
+    }
+
     screenRoot.innerHTML = `
       <div class="screen-room">방: ${room}</div>
       <section class="screen-card ready-card">
@@ -656,6 +926,19 @@ function renderScreen() {
   }
 
   if (state.view === "result") {
+    if (state.game === "quiet") {
+      screenRoot.innerHTML = `
+        <div class="screen-room">방: ${room}</div>
+        <section class="screen-card quiet-screen">
+          <p class="eyebrow">조용히 먹기 결과</p>
+          <h1>순위표</h1>
+          ${renderQuietLeaderboard(state.quietResults)}
+          <button type="button" class="primary" data-action="setup">다음 도전자</button>
+        </section>
+      `;
+      return;
+    }
+
     screenRoot.innerHTML = `
       <div class="screen-room">방: ${room}</div>
       <section class="screen-card">
@@ -677,6 +960,18 @@ function renderScreen() {
 }
 
 function renderScreenItem(game, item) {
+  if (game === "quiet") {
+    return `
+      <section class="screen-card quiet-screen">
+        <p class="eyebrow">측정 중</p>
+        <h1>${escapeHtml(currentState.quietName || "도전자")}</h1>
+        ${renderQuietGauge(currentState.quietCurrentLevel, currentState.quietPeakLevel)}
+        <button type="button" class="danger quiet-stop-button" data-action="quietStop">측정 종료</button>
+        <p class="screen-sub">${currentState.quietError || "다 먹을 때까지 조용히!"}</p>
+      </section>
+    `;
+  }
+
   if (!item) return `<section class="screen-card"><h1>문제가 없습니다</h1></section>`;
   if (game === "person") return `<img class="screen-image" src="${item.image}" alt="문제 인물 사진" />`;
   if (game === "goldenbell") {
@@ -710,6 +1005,9 @@ function renderScreenItem(game, item) {
 }
 
 function render() {
+  if ((currentState?.game !== "quiet" || currentState?.view !== "playing") && quietMeter) {
+    stopQuietMeterStream();
+  }
   if (isHost) renderHost();
   else renderScreen();
   renderTimer();
@@ -775,6 +1073,9 @@ function bindActions(root) {
     if (event.target.id === "teamSizeInput") {
       currentState.teamSize = Number(event.target.value || 4);
     }
+    if (event.target.id === "quietNameInput") {
+      currentState.quietName = event.target.value;
+    }
   });
 
   root.addEventListener("click", async (event) => {
@@ -787,10 +1088,32 @@ function bindActions(root) {
     if (action === "roulette") return openRoulette();
     if (action === "spinRoulette" && !currentState.rouletteSpinning) return spinRoulette();
     if (action === "clearCanvas") return clearCatchmindCanvas();
+    if (action === "quietStart") return startQuietMeter();
+    if (action === "quietStop") return stopQuietMeter();
+    if (!isHost && currentState?.game === "quiet" && action === "setup") {
+      stopQuietMeterStream();
+      return saveState({
+        view: "setup",
+        quietName: "",
+        quietCurrentLevel: 0,
+        quietPeakLevel: 0,
+        quietError: null,
+      });
+    }
     if (!isHost) return;
 
     if (action === "menu") return saveState({ ...defaultState, usedIds: currentState?.usedIds || {} });
-    if (action === "setup") return saveState({ view: "setup", endAt: null });
+    if (action === "setup") {
+      stopQuietMeterStream();
+      return saveState({
+        view: "setup",
+        endAt: null,
+        quietName: currentState?.game === "quiet" ? "" : currentState?.quietName,
+        quietCurrentLevel: 0,
+        quietPeakLevel: currentState?.game === "quiet" ? 0 : currentState?.quietPeakLevel,
+        quietError: null,
+      });
+    }
     if (action === "start") return startRound();
     if (action === "begin") return beginPlaying();
     if (action === "reveal") return toggleRevealAnswer();
@@ -800,6 +1123,7 @@ function bindActions(root) {
     if (action === "pass") return markResult("pass");
     if (action === "finish") return finishRound();
     if (action === "resetUsed") return resetUsed();
+    if (action === "quietReset") return resetQuietResults();
   });
 }
 
@@ -861,4 +1185,5 @@ loadPeople()
 
 window.addEventListener("beforeunload", () => {
   if (tickTimer) clearInterval(tickTimer);
+  stopQuietMeterStream();
 });

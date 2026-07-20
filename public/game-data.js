@@ -29,6 +29,12 @@ export const games = {
     defaultSeconds: 90,
     categories: ["속담/관용어", "영화/드라마", "직업/역할", "브랜드/로고", "유명 캐릭터"],
   },
+  quiet: {
+    title: "조용히 먹기",
+    description: "과자를 먹는 동안 최고 소리 기록이 낮은 사람이 승리",
+    defaultSeconds: 0,
+    categories: ["전체"],
+  },
 };
 
 export const packs = {
