@@ -16,10 +16,10 @@
 
 body {
   background: #f7f9fc;
-  height: 100vh;
   min-height: 100vh;
   margin: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 button,
@@ -45,11 +45,9 @@ a {
 .app-shell {
   display: grid;
   gap: 12px;
-  grid-template-rows: auto minmax(0, 1fr);
   margin: 0 auto;
   max-width: 920px;
-  height: 100vh;
-  min-height: 0;
+  min-height: 100vh;
   padding: 14px;
 }
 
@@ -87,7 +85,7 @@ h1 {
   display: grid;
   gap: 10px;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .status-stack {
@@ -248,8 +246,6 @@ h1 {
   border: 1px solid #d9e2ef;
   border-radius: 8px;
   box-shadow: 0 10px 24px rgba(26, 45, 75, 0.08);
-  max-height: 100%;
-  overflow: hidden;
   padding: 14px;
 }
 
@@ -642,14 +638,14 @@ h1 {
 
 .screen {
   background: #f7f9fc;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .screen-shell {
   display: grid;
-  height: 100vh;
-  min-height: 0;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow: visible;
   padding: 12px;
   place-items: center;
   position: relative;
@@ -667,8 +663,6 @@ h1 {
   display: grid;
   gap: 14px;
   max-width: 1120px;
-  max-height: calc(100vh - 24px);
-  overflow: hidden;
   padding: 16px;
   width: 100%;
 }
@@ -690,9 +684,7 @@ h1 {
 .screen-card {
   display: grid;
   gap: 12px;
-  max-height: calc(100vh - 24px);
   max-width: 1100px;
-  overflow: hidden;
   padding: 18px;
   text-align: center;
 }
