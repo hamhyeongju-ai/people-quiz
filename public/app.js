@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=25";
+import { games, packs } from "./game-data.js?v=26";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 25;
+const APP_VERSION = 26;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -479,6 +479,7 @@ async function resetQuietResults() {
     quietPeakLevel: 0,
     quietName: "",
     quietError: null,
+    countdownEndAt: null,
   });
 }
 
@@ -521,51 +522,72 @@ async function startQuietMeter() {
       peak: 0,
       lastPush: 0,
       animationId: null,
+      measuring: false,
     };
 
     await saveState({
-      view: "playing",
+      view: "quietCountdown",
       quietName: name,
       quietCurrentLevel: 0,
       quietPeakLevel: 0,
       quietError: null,
+      countdownEndAt: Date.now() + 3000,
       endAt: null,
     });
 
-    const measure = async () => {
-      if (!quietMeter || currentState?.game !== "quiet" || currentState?.view !== "playing") {
-        stopQuietMeterStream();
-        return;
-      }
-
-      quietMeter.analyser.getByteTimeDomainData(quietMeter.data);
-      let sum = 0;
-      for (const value of quietMeter.data) {
-        const centered = (value - 128) / 128;
-        sum += centered * centered;
-      }
-      const rms = Math.sqrt(sum / quietMeter.data.length);
-      const level = Math.max(0, Math.min(100, 20 * Math.log10(rms || 0.00001) + 100));
-      quietMeter.peak = Math.max(quietMeter.peak, level);
-
-      const now = Date.now();
-      if (now - quietMeter.lastPush > 220) {
-        quietMeter.lastPush = now;
-        await saveState({
-          quietCurrentLevel: Number(level.toFixed(1)),
-          quietPeakLevel: Number(quietMeter.peak.toFixed(1)),
-        });
-      }
-
-      if (quietMeter) quietMeter.animationId = requestAnimationFrame(measure);
-    };
-
-    quietMeter.animationId = requestAnimationFrame(measure);
+    setTimeout(beginQuietMeasurement, 3100);
   } catch (error) {
     await saveState({
       quietError: "마이크 권한이 필요합니다. 허용 후 다시 시작해주세요.",
     });
   }
+}
+
+async function beginQuietMeasurement() {
+  if (!screenRoot || !quietMeter || quietMeter.measuring) return;
+  if (currentState?.game !== "quiet" || currentState?.view !== "quietCountdown") return;
+
+  quietMeter.measuring = true;
+  quietMeter.peak = 0;
+  quietMeter.lastPush = 0;
+  playEffect("start");
+
+  await saveState({
+    view: "playing",
+    quietCurrentLevel: 0,
+    quietPeakLevel: 0,
+    countdownEndAt: null,
+  });
+
+  const measure = async () => {
+    if (!quietMeter || currentState?.game !== "quiet" || currentState?.view !== "playing") {
+      stopQuietMeterStream();
+      return;
+    }
+
+    quietMeter.analyser.getByteTimeDomainData(quietMeter.data);
+    let sum = 0;
+    for (const value of quietMeter.data) {
+      const centered = (value - 128) / 128;
+      sum += centered * centered;
+    }
+    const rms = Math.sqrt(sum / quietMeter.data.length);
+    const level = Math.max(0, Math.min(100, 20 * Math.log10(rms || 0.00001) + 100));
+    quietMeter.peak = Math.max(quietMeter.peak, level);
+
+    const now = Date.now();
+    if (now - quietMeter.lastPush > 220) {
+      quietMeter.lastPush = now;
+      await saveState({
+        quietCurrentLevel: Number(level.toFixed(1)),
+        quietPeakLevel: Number(quietMeter.peak.toFixed(1)),
+      });
+    }
+
+    if (quietMeter) quietMeter.animationId = requestAnimationFrame(measure);
+  };
+
+  quietMeter.animationId = requestAnimationFrame(measure);
 }
 
 async function stopQuietMeter() {
@@ -584,6 +606,7 @@ async function stopQuietMeter() {
     quietCurrentLevel: 0,
     quietPeakLevel: peak,
     quietError: null,
+    countdownEndAt: null,
   });
 }
 
@@ -603,6 +626,7 @@ async function finishQuietByHost() {
     quietCurrentLevel: 0,
     quietPeakLevel: peak,
     quietError: null,
+    countdownEndAt: null,
   });
 }
 
@@ -706,13 +730,17 @@ async function finishCatchmindTurn() {
 function renderTimer() {
   const state = currentState || defaultState;
   const catchmindInfo = getCatchmindRelayInfo(state);
+  const quietCountdownRemaining = state.game === "quiet" && state.view === "quietCountdown"
+    ? Math.max(0, (state.countdownEndAt || 0) - Date.now())
+    : 0;
   const remaining = catchmindInfo?.phase === "draw"
     ? Math.max(0, (state.relaySegmentEndAt || 0) - Date.now())
     : state.endAt
       ? state.endAt - Date.now()
       : 0;
   if (timerLabel) {
-    if (state.view === "ready") timerLabel.textContent = "READY";
+    if (state.view === "quietCountdown") timerLabel.textContent = String(Math.max(1, Math.ceil(quietCountdownRemaining / 1000)));
+    else if (state.view === "ready") timerLabel.textContent = "READY";
     else timerLabel.textContent = state.view === "playing" && (state.endAt || catchmindInfo?.phase === "draw") ? formatTime(remaining) : "--:--";
   }
 
@@ -720,6 +748,9 @@ function renderTimer() {
   if (screenTimer) {
     screenTimer.textContent = state.view === "playing" && (state.endAt || catchmindInfo?.phase === "draw") ? formatTime(remaining) : "";
   }
+  document.querySelectorAll("[data-quiet-countdown]").forEach((item) => {
+    item.textContent = quietCountdownRemaining <= 0 ? "START!" : String(Math.ceil(quietCountdownRemaining / 1000));
+  });
   if (scoreLabel) {
     scoreLabel.textContent = state.game === "goldenbell"
       ? "생존형 골든벨"
@@ -746,6 +777,9 @@ function renderTimer() {
     finishCatchmindTurn();
   }
   if (isHost && state.view === "playing" && state.endAt && remaining <= 0) finishRound();
+  if (screenRoot && state.game === "quiet" && state.view === "quietCountdown" && quietCountdownRemaining <= 0) {
+    beginQuietMeasurement();
+  }
 }
 
 function getCatchmindRelayInfo(state) {
@@ -1058,6 +1092,18 @@ function renderHost() {
     return;
   }
 
+  if (state.view === "quietCountdown") {
+    hostRoot.innerHTML = `
+      <section class="answer-panel quiet-panel">
+        <p class="label">조용히 먹기</p>
+        <h1>${escapeHtml(state.quietName || "도전자")}</h1>
+        <p class="quiet-countdown" data-quiet-countdown>${Math.max(1, Math.ceil(((state.countdownEndAt || Date.now()) - Date.now()) / 1000))}</p>
+        <p class="helper-text">카운트다운이 끝나면 갤럭시탭에서 데시벨 측정이 시작됩니다.</p>
+      </section>
+    `;
+    return;
+  }
+
   if (state.view === "playing") {
     if (state.game === "quiet") {
       hostRoot.innerHTML = `
@@ -1351,6 +1397,19 @@ function renderScreen() {
     return;
   }
 
+  if (state.view === "quietCountdown") {
+    screenRoot.innerHTML = `
+      <div class="screen-room">방: ${room}</div>
+      <section class="screen-card quiet-screen">
+        <p class="eyebrow">조용히 먹기</p>
+        <h1>${escapeHtml(state.quietName || "도전자")}</h1>
+        <p class="quiet-countdown" data-quiet-countdown>${Math.max(1, Math.ceil(((state.countdownEndAt || Date.now()) - Date.now()) / 1000))}</p>
+        <p class="screen-sub">카운트다운 후 측정 시작</p>
+      </section>
+    `;
+    return;
+  }
+
   if (state.view === "result") {
     if (state.game === "quiet") {
       screenRoot.innerHTML = `
@@ -1478,7 +1537,7 @@ function renderScreenItem(game, item) {
 }
 
 function render() {
-  if ((currentState?.game !== "quiet" || currentState?.view !== "playing") && quietMeter) {
+  if ((currentState?.game !== "quiet" || !["playing", "quietCountdown"].includes(currentState?.view)) && quietMeter) {
     stopQuietMeterStream();
   }
   syncAudio(currentState || defaultState);
