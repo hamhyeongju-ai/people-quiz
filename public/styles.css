@@ -16,8 +16,10 @@
 
 body {
   background: #f7f9fc;
+  height: 100vh;
   min-height: 100vh;
   margin: 0;
+  overflow: hidden;
 }
 
 button,
@@ -42,11 +44,13 @@ a {
 
 .app-shell {
   display: grid;
-  gap: 18px;
+  gap: 12px;
+  grid-template-rows: auto minmax(0, 1fr);
   margin: 0 auto;
   max-width: 920px;
-  min-height: 100vh;
-  padding: 22px;
+  height: 100vh;
+  min-height: 0;
+  padding: 14px;
 }
 
 .topbar {
@@ -81,7 +85,9 @@ h1 {
 .host-root {
   align-content: start;
   display: grid;
-  gap: 18px;
+  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .status-stack {
@@ -119,7 +125,7 @@ h1 {
 .rule-panel,
 .scoreboard {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .team-name-grid,
@@ -134,7 +140,7 @@ h1 {
   border: 1px solid #d9e2ef;
   border-radius: 8px;
   box-shadow: 0 10px 24px rgba(26, 45, 75, 0.08);
-  padding: 16px;
+  padding: 12px;
 }
 
 .scoreboard-head {
@@ -149,8 +155,8 @@ h1 {
   border: 1px solid #d9e2ef;
   border-radius: 8px;
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 8px;
+  padding: 10px;
 }
 
 .score-card strong {
@@ -164,6 +170,16 @@ h1 {
   font-size: clamp(28px, 6vw, 56px);
   font-weight: 950;
   line-height: 1;
+}
+
+.score-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.score-register {
+  align-self: center;
 }
 
 .rule-panel ul,
@@ -188,7 +204,7 @@ h1 {
 
 .game-grid {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
@@ -198,9 +214,9 @@ h1 {
   border-radius: 8px;
   box-shadow: 0 10px 24px rgba(26, 45, 75, 0.08);
   display: grid;
-  gap: 10px;
-  min-height: 142px;
-  padding: 20px;
+  gap: 8px;
+  min-height: 112px;
+  padding: 14px;
   text-align: left;
 }
 
@@ -232,7 +248,9 @@ h1 {
   border: 1px solid #d9e2ef;
   border-radius: 8px;
   box-shadow: 0 10px 24px rgba(26, 45, 75, 0.08);
-  padding: 18px;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 14px;
 }
 
 .roulette-panel {
@@ -254,14 +272,14 @@ h1 {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .chip-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .chip {
@@ -283,7 +301,7 @@ h1 {
 .field {
   display: grid;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .field span {
@@ -418,7 +436,7 @@ h1 {
 
 .answer {
   color: #101827;
-  font-size: clamp(34px, 8vw, 64px);
+  font-size: clamp(32px, 7vw, 58px);
   font-weight: 950;
   line-height: 1;
   margin: 0;
@@ -426,7 +444,7 @@ h1 {
 
 .small-answer,
 .question {
-  font-size: clamp(28px, 6vw, 46px);
+  font-size: clamp(26px, 5vw, 42px);
 }
 
 .question {
@@ -438,7 +456,7 @@ h1 {
 
 .controls {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
@@ -472,8 +490,8 @@ h1 {
 }
 
 .helper-text {
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .roulette-track {
@@ -629,8 +647,10 @@ h1 {
 
 .screen-shell {
   display: grid;
-  min-height: 100vh;
-  padding: 18px;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px;
   place-items: center;
   position: relative;
 }
@@ -638,21 +658,23 @@ h1 {
 .screen-image {
   background: #ffffff;
   display: block;
-  height: calc(100vh - 36px);
+  height: calc(100vh - 24px);
   max-width: 100%;
   object-fit: contain;
 }
 
 .screen-menu {
   display: grid;
-  gap: 22px;
+  gap: 14px;
   max-width: 1120px;
-  padding: 26px;
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
+  padding: 16px;
   width: 100%;
 }
 
 .screen-game-grid {
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
 .screen-chip-row {
@@ -667,9 +689,11 @@ h1 {
 
 .screen-card {
   display: grid;
-  gap: 18px;
+  gap: 12px;
+  max-height: calc(100vh - 24px);
   max-width: 1100px;
-  padding: 28px;
+  overflow: hidden;
+  padding: 18px;
   text-align: center;
 }
 
@@ -684,7 +708,7 @@ h1 {
 
 .screen-card h1 {
   color: #101827;
-  font-size: clamp(54px, 10vw, 124px);
+  font-size: clamp(44px, 8vw, 98px);
   line-height: 1.05;
 }
 
@@ -694,7 +718,7 @@ h1 {
 }
 
 .initials-screen h1 {
-  font-size: clamp(74px, 16vw, 188px);
+  font-size: clamp(64px, 14vw, 160px);
 }
 
 .catchmind-stage h1 {
