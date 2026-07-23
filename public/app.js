@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=26";
+import { games, packs } from "./game-data.js?v=27";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 26;
+const APP_VERSION = 27;
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -28,6 +28,45 @@ let audioContext = null;
 let timingBeatTimer = null;
 let lastWarningSecond = null;
 
+const gameRules = {
+  person: {
+    title: "제한시간 인물퀴즈",
+    lines: ["갤럭시탭에는 사진만 보입니다.", "진행자 화면에는 사진과 정답이 함께 보입니다.", "제한시간 안에 많이 맞히는 팀이 유리합니다."],
+  },
+  charades: {
+    title: "제한시간 몸으로 말해요",
+    lines: ["말 없이 몸짓으로만 설명합니다.", "제한시간 안에 맞힌 개수만큼 점수를 얻습니다.", "패스는 진행자가 필요할 때 눌러도 됩니다."],
+  },
+  chain: {
+    title: "한 주제 줄줄이 말해요",
+    lines: ["카테고리를 고르면 한 가지 주제만 나옵니다.", "진행자가 팀원을 한 명씩 지목하고 3초 안에 답하면 계속 진행합니다.", "막히거나 중복 답이 나오면 실패로 처리합니다."],
+  },
+  goldenbell: {
+    title: "개인전 골든벨",
+    lines: ["골든벨은 무조건 개인전입니다.", "틀린 사람은 탈락하고 최후의 1인이 나올 때까지 진행합니다.", "진행자가 정답 공개 버튼을 누르면 갤럭시탭에도 정답이 보입니다."],
+  },
+  catchmind: {
+    title: "팀 릴레이 캐치마인드",
+    lines: ["한 명은 정답을 맞히고, 나머지 팀원이 순서대로 그림을 이어 그립니다.", "그림 제한시간이 끝나면 맞히는 사람이 정답을 말합니다.", "정답을 맞히면 성공 점수를 줍니다."],
+  },
+  quiet: {
+    title: "대표자 조용히 먹기",
+    lines: ["팀별 대표가 과자를 먹으며 데시벨을 측정합니다.", "측정 시작 후 3초 카운트다운이 끝나면 기록이 시작됩니다.", "가장 낮은 최고 데시벨을 기록한 팀이 유리합니다."],
+  },
+  timing: {
+    title: "목표 시간 맞추기",
+    lines: ["목표 시간을 정하고 참가자가 감으로 STOP을 누릅니다.", "목표 시간과 오차가 가장 작은 사람이 승리합니다.", "배경음은 박자를 맞추기 어렵게 불규칙하게 재생됩니다."],
+  },
+  initials: {
+    title: "문제 수 초성퀴즈",
+    lines: ["타이머 없이 정해진 문제 수만큼 진행합니다.", "초성을 보고 먼저 맞힌 팀이 점수를 얻습니다.", "진행자가 맞힌 팀 점수를 누르고 다음 문제로 넘깁니다."],
+  },
+  song: {
+    title: "노래맞추기 점수판",
+    lines: ["노래는 다른 휴대폰이나 스피커로 틀면 됩니다.", "이 화면은 팀 점수만 관리합니다.", "맞힌 팀의 점수 버튼을 눌러 점수를 누적합니다."],
+  },
+};
+
 const defaultState = {
   appVersion: APP_VERSION,
   view: "menu",
@@ -37,6 +76,14 @@ const defaultState = {
   currentItem: null,
   score: 0,
   pass: 0,
+  playMode: "team",
+  teamCount: 2,
+  teams: [
+    { name: "A팀", score: 0 },
+    { name: "B팀", score: 0 },
+  ],
+  questionLimit: 10,
+  questionNumber: 0,
   revealAnswer: false,
   feedback: null,
   endAt: null,
@@ -165,23 +212,27 @@ function playEffect(name) {
 
 function startTimingMusic() {
   if (timingBeatTimer) return;
-  const pattern = [0, 1, 2, 3, 5, 6, 8, 9, 10, 11];
-  let step = 0;
   playEffect("start");
-  timingBeatTimer = setInterval(() => {
+  const schedule = () => {
     const context = getAudioContext();
-    if (!context) return;
-    if (pattern.includes(step % 12)) {
-      const high = step % 12 === 5 || step % 12 === 6;
-      tone(high ? 740 : 520, context.currentTime, 0.055, { type: "square", volume: high ? 0.09 : 0.075 });
+    if (!context || !timingBeatTimer) return;
+    const base = 220 + Math.random() * 520;
+    const burst = Math.random() > 0.62 ? 2 : 1;
+    for (let index = 0; index < burst; index += 1) {
+      const start = context.currentTime + index * (0.055 + Math.random() * 0.08);
+      tone(260 + Math.random() * 620, start, 0.045 + Math.random() * 0.07, {
+        type: Math.random() > 0.5 ? "sawtooth" : "triangle",
+        volume: 0.055 + Math.random() * 0.035,
+      });
     }
-    step += 1;
-  }, 105);
+    timingBeatTimer = setTimeout(schedule, base);
+  };
+  timingBeatTimer = setTimeout(schedule, 260);
 }
 
 function stopTimingMusic() {
   if (!timingBeatTimer) return;
-  clearInterval(timingBeatTimer);
+  clearTimeout(timingBeatTimer);
   timingBeatTimer = null;
 }
 
@@ -201,7 +252,7 @@ function getCategoryOptions(game) {
 }
 
 function getItems(game, category) {
-  if (game === "quiet" || game === "timing") return [];
+  if (game === "quiet" || game === "timing" || game === "song") return [];
 
   if (game === "person") {
     if (!category || category === "전체") return people;
@@ -254,6 +305,51 @@ async function resetRoom() {
   await saveState(clone(defaultState));
 }
 
+function buildTeams(count = 2, existing = []) {
+  return Array.from({ length: count }, (_, index) => ({
+    name: existing[index]?.name || `${String.fromCharCode(65 + index)}팀`,
+    score: Number(existing[index]?.score || 0),
+  }));
+}
+
+async function setPlayMode(mode) {
+  playEffect("select");
+  await saveState({
+    playMode: mode,
+    teamCount: mode === "team" ? currentState.teamCount || 2 : 0,
+    teams: mode === "team" ? buildTeams(currentState.teamCount || 2, currentState.teams) : [],
+  });
+}
+
+async function setTeamCount(count) {
+  playEffect("select");
+  await saveState({
+    playMode: "team",
+    teamCount: count,
+    teams: buildTeams(count, currentState.teams),
+  });
+}
+
+async function resetTeamScores() {
+  playEffect("reset");
+  await saveState({
+    teams: buildTeams(currentState.teamCount || 2, currentState.teams).map((team) => ({ ...team, score: 0 })),
+  });
+}
+
+async function awardTeam(index, amount = 1) {
+  if (currentState.game === "goldenbell" || currentState.playMode !== "team") return;
+  playEffect("correct");
+  const teams = buildTeams(currentState.teamCount || 2, currentState.teams);
+  if (!teams[index]) return;
+  teams[index] = { ...teams[index], score: Number(teams[index].score || 0) + amount };
+  await saveState({ teams });
+
+  if (currentState.game === "initials") {
+    await nextQuestion();
+  }
+}
+
 async function resetAllGameData() {
   const confirmed = window.confirm("테스트 기록과 사용한 문제 기록을 모두 지우고 처음 화면으로 돌아갈까요?");
   if (!confirmed) return;
@@ -263,13 +359,14 @@ async function resetAllGameData() {
 async function chooseGame(game) {
   playEffect("select");
   await saveState({
-    view: "setup",
+    view: "instructions",
     game,
     category: games[game].categories[0],
     duration: games[game].defaultSeconds,
     currentItem: null,
     score: 0,
     pass: 0,
+    questionNumber: 0,
     revealAnswer: false,
     feedback: null,
     endAt: null,
@@ -345,6 +442,18 @@ async function spinRoulette() {
 
 async function startRound() {
   playEffect("start");
+  if (currentState.game === "song") {
+    await saveState({
+      view: "playing",
+      currentItem: null,
+      score: 0,
+      pass: 0,
+      revealAnswer: false,
+      feedback: null,
+      endAt: null,
+    });
+    return;
+  }
   if (currentState.game === "timing") {
     await saveState({
       view: "ready",
@@ -363,6 +472,7 @@ async function startRound() {
     currentItem: item,
     score: 0,
     pass: 0,
+    questionNumber: item ? 1 : 0,
     revealAnswer: false,
     feedback: null,
     usedIds,
@@ -393,7 +503,7 @@ async function beginPlaying() {
     relayPhase: currentState.game === "catchmind" ? "waiting" : null,
     relayIndex: 1,
     relaySegmentEndAt: null,
-    endAt: currentState.game === "catchmind" ? null : now + duration,
+    endAt: currentState.game === "catchmind" || currentState.game === "initials" || currentState.game === "chain" ? null : now + duration,
   });
 }
 
@@ -411,7 +521,19 @@ async function markResult(kind) {
   gameUsed.add(itemId(currentState.game, currentState.currentItem));
   usedIds[currentState.game] = Array.from(gameUsed);
 
+  if (currentState.game === "chain") {
+    await saveState({
+      usedIds,
+      revealAnswer: false,
+      feedback: kind === "correct" ? "성공!" : "실패",
+      score: currentState.score + (kind === "correct" ? 1 : 0),
+      pass: currentState.pass + (kind === "pass" ? 1 : 0),
+    });
+    return;
+  }
+
   const { item, usedIds: nextUsedIds } = getUnusedItem({ ...currentState, usedIds });
+  const nextQuestionNumber = currentState.questionNumber + 1;
   await saveState({
     currentItem: item,
     usedIds: nextUsedIds,
@@ -419,7 +541,13 @@ async function markResult(kind) {
     feedback: kind === "correct" ? "정답!" : "패스",
     score: currentState.score + (kind === "correct" ? 1 : 0),
     pass: currentState.pass + (kind === "pass" ? 1 : 0),
+    questionNumber: item ? nextQuestionNumber : currentState.questionNumber,
   });
+
+  if (currentState.game === "initials" && nextQuestionNumber > Number(currentState.questionLimit || 10)) {
+    await finishRound();
+    return;
+  }
 
   setTimeout(() => {
     if (currentState?.feedback) saveState({ feedback: null });
@@ -436,11 +564,22 @@ async function nextQuestion() {
   usedIds[currentState.game] = Array.from(gameUsed);
 
   const { item, usedIds: nextUsedIds } = getUnusedItem({ ...currentState, usedIds });
+  const nextQuestionNumber = currentState.questionNumber + 1;
+  if (currentState.game === "initials" && nextQuestionNumber > Number(currentState.questionLimit || 10)) {
+    await saveState({
+      usedIds: nextUsedIds,
+      revealAnswer: false,
+      feedback: null,
+    });
+    await finishRound();
+    return;
+  }
   await saveState({
     currentItem: item,
     usedIds: nextUsedIds,
     revealAnswer: false,
     feedback: null,
+    questionNumber: item ? nextQuestionNumber : currentState.questionNumber,
   });
 }
 
@@ -826,6 +965,87 @@ function button(label, className, action) {
   return `<button type="button" class="${className}" data-action="${action}">${label}</button>`;
 }
 
+function isTeamScoredGame(game) {
+  return currentState?.playMode === "team" && !["goldenbell", "quiet", "timing"].includes(game);
+}
+
+function renderTeamSetup(state) {
+  const teams = buildTeams(state.teamCount || 2, state.teams);
+  return `
+    <section class="notice-panel team-panel">
+      <p class="label">운영 방식</p>
+      <div class="chip-row">
+        <button type="button" class="chip ${state.playMode === "team" ? "active" : ""}" data-action="mode:team">팀전</button>
+        <button type="button" class="chip ${state.playMode === "solo" ? "active" : ""}" data-action="mode:solo">개인전</button>
+      </div>
+      ${
+        state.playMode === "team"
+          ? `<div class="chip-row">
+              <button type="button" class="chip ${state.teamCount === 2 ? "active" : ""}" data-action="teamCount:2">2팀</button>
+              <button type="button" class="chip ${state.teamCount === 3 ? "active" : ""}" data-action="teamCount:3">3팀</button>
+            </div>
+            <div class="team-name-grid">
+              ${teams
+                .map(
+                  (team, index) => `
+                    <label class="field">
+                      <span>${index + 1}팀 이름</span>
+                      <input id="teamName-${index}" type="text" maxlength="12" value="${escapeHtml(team.name)}" />
+                    </label>
+                  `,
+                )
+                .join("")}
+            </div>`
+          : `<p class="helper-text">개인전에서는 팀 점수판을 숨깁니다. 골든벨은 항상 개인전으로 진행됩니다.</p>`
+      }
+    </section>
+  `;
+}
+
+function renderScoreboard(state, includeButtons = true) {
+  if (state.playMode !== "team" || state.game === "goldenbell") return "";
+  const teams = buildTeams(state.teamCount || 2, state.teams);
+  return `
+    <section class="scoreboard">
+      <div class="scoreboard-head">
+        <p class="label">팀 점수판</p>
+        ${includeButtons ? button("점수 초기화", "mini-button", "teamReset") : ""}
+      </div>
+      <div class="score-grid">
+        ${teams
+          .map(
+            (team, index) => `
+              <div class="score-card">
+                <strong>${escapeHtml(team.name)}</strong>
+                <span>${Number(team.score || 0)}점</span>
+                ${includeButtons && isTeamScoredGame(state.game) ? `<button type="button" class="primary" data-action="teamScore:${index}">+1</button>` : ""}
+              </div>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderRules(game) {
+  const rule = gameRules[game];
+  if (!rule) return "";
+  return `
+    <section class="notice-panel rule-panel">
+      <p class="label">게임 설명</p>
+      <h1>${rule.title}</h1>
+      <ul>
+        ${rule.lines.map((line) => `<li>${line}</li>`).join("")}
+      </ul>
+      <div class="controls">
+        ${button("설정으로", "primary", "setup")}
+        ${button("게임 선택", "secondary", "menu")}
+      </div>
+    </section>
+  `;
+}
+
 function gameCards(mode) {
   return Object.entries(games)
     .map(
@@ -942,11 +1162,21 @@ function renderHost() {
 
   if (state.view === "menu") {
     hostRoot.innerHTML = `
+      ${renderTeamSetup(state)}
+      ${renderScoreboard(state, false)}
       <section class="notice-panel">
         <p class="label">게임 선택 대기</p>
         <p class="helper-text">갤럭시탭 참가자 화면에서 게임을 고르면 이 화면도 같이 넘어갑니다.</p>
       </section>
       <section class="game-grid">${gameCards("host")}</section>
+    `;
+    return;
+  }
+
+  if (state.view === "instructions") {
+    hostRoot.innerHTML = `
+      ${renderScoreboard(state, false)}
+      ${renderRules(state.game)}
     `;
     return;
   }
@@ -973,8 +1203,26 @@ function renderHost() {
   }
 
   if (state.view === "setup") {
+    if (state.game === "song") {
+      hostRoot.innerHTML = `
+        ${renderScoreboard(state)}
+        <section class="setup-panel">
+          <div class="setup-head">
+            <button type="button" class="secondary" data-action="menu">← 게임 선택</button>
+          </div>
+          <p class="label">노래맞추기</p>
+          <h1>노래는 다른 기기로 틀고, 맞힌 팀에 점수만 주세요</h1>
+          <p class="helper-text">갤럭시탭에는 점수판이 크게 표시됩니다.</p>
+          <div class="controls">
+            ${button("점수판 시작", "primary", "start")}
+          </div>
+        </section>
+      `;
+      return;
+    }
     if (state.game === "quiet") {
       hostRoot.innerHTML = `
+        ${renderScoreboard(state, false)}
         <section class="setup-panel quiet-panel">
           <div class="setup-head">
             <button type="button" class="secondary" data-action="menu">← 게임 선택</button>
@@ -991,6 +1239,7 @@ function renderHost() {
     }
     if (state.game === "timing") {
       hostRoot.innerHTML = `
+        ${renderScoreboard(state, false)}
         <section class="setup-panel quiet-panel">
           <div class="setup-head">
             <button type="button" class="secondary" data-action="menu">← 게임 선택</button>
@@ -1017,6 +1266,7 @@ function renderHost() {
     const usedCount = (state.usedIds?.[state.game] || []).length;
     const isGoldenbell = state.game === "goldenbell";
     hostRoot.innerHTML = `
+      ${renderScoreboard(state)}
       <section class="setup-panel">
         <div class="setup-head">
           <button type="button" class="secondary" data-action="menu">← 게임 선택</button>
@@ -1031,10 +1281,19 @@ function renderHost() {
                  ${categoryButtons(state.game, state.category)}
                </div>`
         }
-        <label class="field">
-          <span>타이머 초</span>
-          <input id="durationInput" type="number" min="10" max="600" step="10" value="${state.duration}" />
-        </label>
+        ${
+          state.game === "initials"
+            ? `<label class="field">
+                <span>진행할 문제 수</span>
+                <input id="questionLimitInput" type="number" min="1" max="50" step="1" value="${state.questionLimit || 10}" />
+              </label>`
+            : state.game === "chain"
+              ? `<p class="helper-text">주제 하나를 뽑아 성공/실패만 판단합니다. 타이머는 사용하지 않습니다.</p>`
+              : `<label class="field">
+                  <span>타이머 초</span>
+                  <input id="durationInput" type="number" min="10" max="600" step="10" value="${state.duration}" />
+                </label>`
+        }
         ${
           state.game === "catchmind"
             ? `<label class="field">
@@ -1083,6 +1342,7 @@ function renderHost() {
     }
 
     hostRoot.innerHTML = `
+      ${renderScoreboard(state)}
       <section class="result-panel">
         <p class="label">문제 준비 완료</p>
         <p class="helper-text">갤럭시탭에는 READY가 표시됩니다. START를 누르면 타이머가 시작됩니다.</p>
@@ -1105,6 +1365,20 @@ function renderHost() {
   }
 
   if (state.view === "playing") {
+    if (state.game === "song") {
+      hostRoot.innerHTML = `
+        ${renderScoreboard(state)}
+        <section class="answer-panel">
+          <p class="label">노래맞추기 진행 중</p>
+          <p class="answer">맞힌 팀에 +1</p>
+          <p class="helper-text">노래는 다른 기기로 틀고, 진행자 화면에서 점수만 누르면 됩니다.</p>
+          <div class="controls">
+            ${button("종료", "danger", "finish")}
+          </div>
+        </section>
+      `;
+      return;
+    }
     if (state.game === "quiet") {
       hostRoot.innerHTML = `
         <section class="answer-panel quiet-panel">
@@ -1139,6 +1413,7 @@ function renderHost() {
     }
 
     hostRoot.innerHTML = `
+      ${renderScoreboard(state)}
       <section class="stage">${renderHostItem(state.game, state.currentItem)}</section>
       ${renderHostControls(state)}
     `;
@@ -1181,6 +1456,7 @@ function renderHost() {
     }
 
     hostRoot.innerHTML = `
+      ${renderScoreboard(state, false)}
       <section class="result-panel">
         <p class="label">게임 종료</p>
         <p class="answer">${state.game === "goldenbell" ? "골든벨 종료" : `${state.score || 0}개 정답`}</p>
@@ -1196,12 +1472,34 @@ function renderHost() {
 }
 
 function renderHostControls(state) {
+  if (state.game === "song") return "";
   if (state.game === "goldenbell") {
     return `
       <nav class="controls">
         ${button(state.revealAnswer ? "정답 숨기기" : "정답 공개", "primary", "reveal")}
         ${button("다음 문제", "secondary", "nextQuestion")}
         ${button("패자부활전", "secondary", "revival")}
+        ${button("종료", "danger", "finish")}
+      </nav>
+    `;
+  }
+
+  if (state.game === "chain") {
+    return `
+      <nav class="controls">
+        ${button("성공", "primary", "correct")}
+        ${button("실패", "danger", "pass")}
+        ${button("다음 주제", "secondary", "nextQuestion")}
+        ${button("종료", "danger", "finish")}
+      </nav>
+    `;
+  }
+
+  if (state.game === "initials") {
+    return `
+      <nav class="controls">
+        ${button("정답 공개/숨기기", "primary", "reveal")}
+        ${button("다음 문제", "secondary", "nextQuestion")}
         ${button("종료", "danger", "finish")}
       </nav>
     `;
@@ -1281,7 +1579,35 @@ function renderScreen() {
     return;
   }
 
+  if (state.view === "instructions") {
+    const rule = gameRules[state.game];
+    screenRoot.innerHTML = `
+      <div class="screen-room">방: ${room}</div>
+      <section class="screen-menu">
+        <p class="eyebrow">게임 설명</p>
+        <h1>${rule?.title || games[state.game].title}</h1>
+        <div class="screen-rule-list">
+          ${(rule?.lines || []).map((line) => `<p>${line}</p>`).join("")}
+        </div>
+        <p class="helper-text">아이폰 진행자 화면에서 설정을 이어갑니다.</p>
+      </section>
+    `;
+    return;
+  }
+
   if (state.view === "setup") {
+    if (state.game === "song") {
+      screenRoot.innerHTML = `
+        <div class="screen-room">방: ${room}</div>
+        <section class="screen-card quiet-screen">
+          <p class="eyebrow">노래맞추기</p>
+          <h1>노래 준비</h1>
+          <p class="screen-sub">진행자가 점수판을 시작합니다</p>
+          ${renderScoreboard(state, false)}
+        </section>
+      `;
+      return;
+    }
     if (state.game === "quiet") {
       screenRoot.innerHTML = `
         <div class="screen-room">방: ${room}</div>
@@ -1445,6 +1771,18 @@ function renderScreen() {
         <p class="eyebrow">게임 종료</p>
         <h1>${state.game === "goldenbell" ? "골든벨 종료" : `${state.score || 0}개 정답`}</h1>
         <p class="screen-sub">${state.game === "goldenbell" ? "수고하셨습니다" : `패스 ${state.pass || 0}개`}</p>
+      </section>
+    `;
+    return;
+  }
+
+  if (state.game === "song" && state.view === "playing") {
+    screenRoot.innerHTML = `
+      <div class="screen-room">방: ${room}</div>
+      <section class="screen-card quiet-screen">
+        <p class="eyebrow">노래맞추기</p>
+        <h1>맞힌 팀에 점수!</h1>
+        ${renderScoreboard(state, false)}
       </section>
     `;
     return;
@@ -1652,6 +1990,15 @@ function bindActions(root) {
     if (event.target.id === "timingTargetInput") {
       currentState.timingTarget = Number(event.target.value || 7.77);
     }
+    if (event.target.id === "questionLimitInput") {
+      currentState.questionLimit = Number(event.target.value || 10);
+    }
+    if (event.target.id?.startsWith("teamName-")) {
+      const index = Number(event.target.id.slice("teamName-".length));
+      const teams = buildTeams(currentState.teamCount || 2, currentState.teams);
+      if (teams[index]) teams[index].name = event.target.value || `${String.fromCharCode(65 + index)}팀`;
+      currentState.teams = teams;
+    }
     if (event.target.id === "quietNameInput") {
       currentState.quietName = event.target.value;
     }
@@ -1667,6 +2014,10 @@ function bindActions(root) {
     const action = target.dataset.action;
     if (action.startsWith("game:")) return chooseGame(action.slice(5));
     if (action.startsWith("category:")) return chooseCategory(action.slice(9));
+    if (action.startsWith("mode:")) return setPlayMode(action.slice(5));
+    if (action.startsWith("teamCount:")) return setTeamCount(Number(action.slice(10)));
+    if (action.startsWith("teamScore:")) return awardTeam(Number(action.slice(10)));
+    if (action === "teamReset") return resetTeamScores();
     if (action === "roulette") return openRoulette();
     if (action === "spinRoulette" && !currentState.rouletteSpinning) return spinRoulette();
     if (action === "clearCanvas") return clearCatchmindCanvas();

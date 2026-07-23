@@ -115,6 +115,77 @@ h1 {
   font-weight: 800;
 }
 
+.team-panel,
+.rule-panel,
+.scoreboard {
+  display: grid;
+  gap: 14px;
+}
+
+.team-name-grid,
+.score-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.scoreboard {
+  background: #ffffff;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(26, 45, 75, 0.08);
+  padding: 16px;
+}
+
+.scoreboard-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.score-card {
+  background: #f7f9fc;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.score-card strong {
+  color: #172033;
+  font-size: clamp(20px, 4vw, 34px);
+  font-weight: 950;
+}
+
+.score-card span {
+  color: #1d4ed8;
+  font-size: clamp(28px, 6vw, 56px);
+  font-weight: 950;
+  line-height: 1;
+}
+
+.rule-panel ul,
+.screen-rule-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.rule-panel li,
+.screen-rule-list p {
+  background: #f7f9fc;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  color: #263548;
+  font-size: clamp(17px, 3vw, 28px);
+  font-weight: 850;
+  line-height: 1.35;
+  margin: 0;
+  padding: 12px 14px;
+}
+
 .game-grid {
   display: grid;
   gap: 12px;
