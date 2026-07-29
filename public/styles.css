@@ -180,6 +180,40 @@ h1 {
   align-self: center;
 }
 
+.manual-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.manual-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.manual-card {
+  background: #f7f9fc;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.manual-card h2 {
+  color: #1d4ed8;
+  font-size: 22px;
+  margin: 0;
+}
+
+.manual-card p {
+  color: #263548;
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.35;
+  margin: 0;
+}
+
 .rule-panel ul,
 .screen-rule-list {
   display: grid;

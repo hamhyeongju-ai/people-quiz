@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=31";
+import { games, packs } from "./game-data.js?v=32";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,7 +15,8 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 31;
+const APP_VERSION = 32;
+const hiddenGames = new Set(["quiet", "song"]);
 let firebase = {};
 let roomRef = null;
 let currentState = null;
@@ -1470,6 +1471,7 @@ function renderRules(game) {
 
 function gameCards(mode) {
   return Object.entries(games)
+    .filter(([key]) => !hiddenGames.has(key))
     .map(
       ([key, game]) => `
         <button type="button" class="game-card" data-action="game:${key}">
@@ -1480,6 +1482,42 @@ function gameCards(mode) {
       `,
     )
     .join("");
+}
+
+function renderManual() {
+  const sections = [
+    ["기본 흐름", "갤럭시탭에서 게임과 카테고리를 고르고, 아이폰에서 설정과 시작을 진행합니다.", "아이폰 상단의 메인페이지로 버튼은 언제든 현재 게임을 멈추고 첫 화면으로 돌아갑니다.", "점수는 점수등록 화면에서 팀별로 더하거나 뺄 수 있고 누적으로 유지됩니다."],
+    ["인물퀴즈", "제한시간 안에 사진을 보고 인물을 많이 맞히는 게임입니다.", "갤럭시탭에는 사진만 보이고, 아이폰에는 사진과 정답이 함께 보입니다.", "정답/패스를 눌러 진행하고 끝난 뒤 점수등록에서 팀 점수를 반영합니다."],
+    ["몸으로 말해요", "제시어를 말하지 않고 몸짓으로 설명합니다.", "제한시간 안에 맞힌 개수를 확인한 뒤 점수등록에서 점수를 줍니다.", "패스가 필요하면 진행자가 패스를 누르면 됩니다."],
+    ["줄줄이 말해요", "카테고리를 고르면 주제 하나가 랜덤으로 나옵니다.", "진행자가 팀원을 한 명씩 지목하고 3초 안에 답하면 계속 이어갑니다.", "막히거나 중복 답이 나오면 실패로 보고, 끝난 뒤 점수등록에서 점수를 조정합니다."],
+    ["골든벨", "골든벨은 개인전으로 진행합니다.", "틀린 사람은 탈락하고 최후의 1인이 나올 때까지 진행합니다.", "정답 공개 버튼을 누르면 갤럭시탭에도 정답이 보입니다."],
+    ["캐치마인드", "한 명은 정답을 맞히고 나머지 팀원이 순서대로 그림을 이어 그립니다.", "각 그림 담당자는 START 후 정해진 시간만 그릴 수 있습니다.", "그림이 완성되면 제한시간 안에 정답을 맞히고, 성공 여부는 점수등록에서 반영합니다."],
+    ["시간맞추기", "목표 시간을 정하고 참가자가 감으로 STOP을 누릅니다.", "목표 시간과 오차가 가장 작은 사람이 이깁니다.", "팀 대표가 도전한 뒤 점수등록에서 순위에 맞게 점수를 주세요."],
+    ["초성퀴즈", "정해진 문제 수만큼 초성을 보고 정답을 맞힙니다.", "맞힌 팀의 +1 버튼을 누르면 자동으로 다음 문제로 넘어갑니다.", "필요하면 점수등록에서 점수를 추가로 보정할 수 있습니다."],
+  ];
+  return `
+    <section class="notice-panel manual-panel">
+      <div class="setup-head">
+        <div>
+          <p class="label">게임 이용 매뉴얼</p>
+          <h1>진행 방법</h1>
+        </div>
+        ${button("메인페이지로", "secondary", "menu")}
+      </div>
+      <div class="manual-grid">
+        ${sections
+          .map(
+            ([title, ...lines]) => `
+              <article class="manual-card">
+                <h2>${title}</h2>
+                ${lines.map((line) => `<p>${line}</p>`).join("")}
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
 }
 
 function categoryButtons(game, selected) {
@@ -1584,12 +1622,12 @@ function renderHost() {
 
   if (state.view === "menu") {
     hostRoot.innerHTML = `
-      ${renderTeamSetup(state)}
       ${renderScoreboard(state, false)}
       <section class="notice-panel">
         <p class="label">게임 선택 대기</p>
         <p class="helper-text">갤럭시탭 참가자 화면에서 게임을 고르면 이 화면도 같이 넘어갑니다.</p>
         <div class="controls">
+          ${button("게임 이용 매뉴얼", "secondary", "manual")}
           ${button("점수등록", "primary", "scoreRegister")}
           ${button("게임 초기화", "danger", "resetAll")}
         </div>
@@ -1601,6 +1639,11 @@ function renderHost() {
 
   if (state.view === "scoreRegister") {
     hostRoot.innerHTML = renderScoreRegister(state);
+    return;
+  }
+
+  if (state.view === "manual") {
+    hostRoot.innerHTML = renderManual();
     return;
   }
 
@@ -1999,8 +2042,19 @@ function renderScreen() {
       <section class="screen-menu">
         <p class="eyebrow">종합게임패키지</p>
         <h1>어떤 게임을 할까요?</h1>
+        <div class="controls">
+          ${button("게임 이용 매뉴얼", "secondary", "manual")}
+        </div>
         <div class="game-grid screen-game-grid">${gameCards("screen")}</div>
       </section>
+    `;
+    return;
+  }
+
+  if (state.view === "manual") {
+    screenRoot.innerHTML = `
+      <div class="screen-room">방: ${room}</div>
+      ${renderManual()}
     `;
     return;
   }
@@ -2452,8 +2506,6 @@ function bindActions(root) {
     const action = target.dataset.action;
     if (action.startsWith("game:")) return chooseGame(action.slice(5));
     if (action.startsWith("category:")) return chooseCategory(action.slice(9));
-    if (action.startsWith("mode:")) return setPlayMode(action.slice(5));
-    if (action.startsWith("teamCount:")) return setTeamCount(Number(action.slice(10)));
     if (action.startsWith("teamScore:")) {
       const [, index, amount] = action.split(":");
       return awardTeam(Number(index), Number(amount || 1));
@@ -2484,9 +2536,10 @@ function bindActions(root) {
         timingElapsed: null,
       });
     }
+    if (action === "menu") return goMainPage();
+    if (action === "manual") return saveState({ view: "manual", game: null, category: null, currentItem: null, endAt: null });
     if (!isHost) return;
 
-    if (action === "menu") return goMainPage();
     if (action === "scoreRegister") return saveState({ view: "scoreRegister", game: null, category: null, currentItem: null, endAt: null });
     if (action === "resetAll") return resetAllGameData();
     if (action === "setup") {
