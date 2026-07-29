@@ -694,5 +694,293 @@
   {
     "name": "로널드 레이건",
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Official_Portrait_of_President_Reagan_1981.jpg/960px-Official_Portrait_of_President_Reagan_1981.jpg"
+  },
+  {
+    "name": "엘링 홀란",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Erling_Haaland_Morocco_v_Norway_7_June_2026-51.jpg/330px-Erling_Haaland_Morocco_v_Norway_7_June_2026-51.jpg"
+  },
+  {
+    "name": "주드 벨링엄",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Jude_Bellingham_England_v_Panama_27_June_26-160_%28cropped%29.jpg/330px-Jude_Bellingham_England_v_Panama_27_June_26-160_%28cropped%29.jpg"
+  },
+  {
+    "name": "카림 벤제마",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Karim_Benzema_Pick.jpg/330px-Karim_Benzema_Pick.jpg"
+  },
+  {
+    "name": "모하메드 살라",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Mohamed_Salah_Argentina_v_Egypt_7_July_2026-163_%28cropped%29.jpg/330px-Mohamed_Salah_Argentina_v_Egypt_7_July_2026-163_%28cropped%29.jpg"
+  },
+  {
+    "name": "케빈 더 브라위너",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Kevin_De_Bruyne_USMNT_v_Belgium_Mar_28_2026-64_%28cropped%29.jpg/330px-Kevin_De_Bruyne_USMNT_v_Belgium_Mar_28_2026-64_%28cropped%29.jpg"
+  },
+  {
+    "name": "지네딘 지단",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Zinedine_Zidane_by_Tasnim_03.jpg/330px-Zinedine_Zidane_by_Tasnim_03.jpg"
+  },
+  {
+    "name": "호나우지뉴",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Sports_Festival_2025_-_4_%28cropped%29.jpg/330px-Sports_Festival_2025_-_4_%28cropped%29.jpg"
+  },
+  {
+    "name": "펠레",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Pele_con_brasil_%28cropped%29.jpg/330px-Pele_con_brasil_%28cropped%29.jpg"
+  },
+  {
+    "name": "디에고 마라도나",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Argentina_celebrando_copa_%28cropped%29.jpg/330px-Argentina_celebrando_copa_%28cropped%29.jpg"
+  },
+  {
+    "name": "매직 존슨",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Magic_Johnson_at_SXSW_2022_%2851958828669%29_%28cropped%29.jpg/330px-Magic_Johnson_at_SXSW_2022_%2851958828669%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "래리 버드",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Larrybird.jpg/330px-Larrybird.jpg"
+  },
+  {
+    "name": "야니스 아데토쿤보",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Giannis_Antetokounmpo_%2851915153421%29_%28cropped%29.jpg/330px-Giannis_Antetokounmpo_%2851915153421%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "케빈 듀랜트",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Kevin_Durant%2C_Paris_2024_%28cropped%29.jpg/330px-Kevin_Durant%2C_Paris_2024_%28cropped%29.jpg"
+  },
+  {
+    "name": "시몬 바일스",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Simone_Biles_National_Team_2024.jpg/330px-Simone_Biles_National_Team_2024.jpg"
+  },
+  {
+    "name": "오사카 나오미",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/NaomiOsaka-smile-2020_%28cropped_tight%29.png/330px-NaomiOsaka-smile-2020_%28cropped_tight%29.png"
+  },
+  {
+    "name": "루이스 해밀턴",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Prime_Minister_Keir_Starmer_meets_Sir_Lewis_Hamilton_%2854566928382%29_%28cropped%29.jpg/330px-Prime_Minister_Keir_Starmer_meets_Sir_Lewis_Hamilton_%2854566928382%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "매니 파퀴아오",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Former_senator_Manny_Pacquiao_speaks_in_event_%2810-01-2025%29_%28cropped%29.jpg/330px-Former_senator_Manny_Pacquiao_speaks_in_event_%2810-01-2025%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "잭 도시",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Jack_Dorsey_in_Washington_D.C._-_2018_%2844538272181%29_%28cropped%29.jpg/330px-Jack_Dorsey_in_Washington_D.C._-_2018_%2844538272181%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "샘 올트먼",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Meeting_with_Masayoshi_Son_and_Sam_Altman_%28February_3%2C_2025%29_%283x4_cropped_on_Altman%29.jpg/330px-Meeting_with_Masayoshi_Son_and_Sam_Altman_%28February_3%2C_2025%29_%283x4_cropped_on_Altman%29.jpg"
+  },
+  {
+    "name": "리사 수",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/SXSW-2024-alih-OB7A0861-Lisa_Su_%28cropped_2%29.jpg/330px-SXSW-2024-alih-OB7A0861-Lisa_Su_%28cropped_2%29.jpg"
+  },
+  {
+    "name": "수전 워치츠키",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Susan_Wojcicki_%2829393944130%29.jpg/330px-Susan_Wojcicki_%2829393944130%29.jpg"
+  },
+  {
+    "name": "피터 틸",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Peter_Thiel_by_Gage_Skidmore.jpg/330px-Peter_Thiel_by_Gage_Skidmore.jpg"
+  },
+  {
+    "name": "레이 달리오",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Web_Summit_2018_-_Forum_-_Day_2%2C_November_7_HM1_7481_%2844858045925%29.jpg/330px-Web_Summit_2018_-_Forum_-_Day_2%2C_November_7_HM1_7481_%2844858045925%29.jpg"
+  },
+  {
+    "name": "마이클 블룸버그",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/MichaelBloomberg-byPhilipRomano_%28cropped_2%29.jpg/330px-MichaelBloomberg-byPhilipRomano_%28cropped_2%29.jpg"
+  },
+  {
+    "name": "마사 스튜어트",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Martha_Stewart_%2848926315347%29_%28cropped%29.jpg/330px-Martha_Stewart_%2848926315347%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "리카싱",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Li_Ka_Shing.jpg/330px-Li_Ka_Shing.jpg"
+  },
+  {
+    "name": "무케시 암바니",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/6/69/Mukesh_Ambani.jpg"
+  },
+  {
+    "name": "이재용",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Lee_Jae-yong_in_2016.jpg/330px-Lee_Jae-yong_in_2016.jpg"
+  },
+  {
+    "name": "정의선",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Chung_Eui-sun_%282025%29_cropped_1.jpg/330px-Chung_Eui-sun_%282025%29_cropped_1.jpg"
+  },
+  {
+    "name": "안중근",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/An_Jung-geun.JPG/330px-An_Jung-geun.JPG"
+  },
+  {
+    "name": "엘리자베스 2세",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Queen_Elizabeth_II_official_portrait_for_1959_tour_%28retouched%29_%28cropped%29_%283-to-4_aspect_ratio%29.jpg/330px-Queen_Elizabeth_II_official_portrait_for_1959_tour_%28retouched%29_%28cropped%29_%283-to-4_aspect_ratio%29.jpg"
+  },
+  {
+    "name": "찰스 3세",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/King_Charles_III_%28July_2023%29.jpg/330px-King_Charles_III_%28July_2023%29.jpg"
+  },
+  {
+    "name": "프랭클린 루스벨트",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/FDR-1944-Campaign-Portrait_%283x4_retouched%2C_cropped%29.jpg/330px-FDR-1944-Campaign-Portrait_%283x4_retouched%2C_cropped%29.jpg"
+  },
+  {
+    "name": "조지 W. 부시",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/George-W-Bush.jpeg/330px-George-W-Bush.jpeg"
+  },
+  {
+    "name": "율리우스 카이사르",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Retrato_de_Julio_C%C3%A9sar_%2826724093101%29_%28cropped%29.jpg/330px-Retrato_de_Julio_C%C3%A9sar_%2826724093101%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "덩샤오핑",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Deng_Xiaoping_at_the_arrival_ceremony_for_the_Vice_Premier_of_China_%28cropped%29.jpg/330px-Deng_Xiaoping_at_the_arrival_ceremony_for_the_Vice_Premier_of_China_%28cropped%29.jpg"
+  },
+  {
+    "name": "프란치스코 교황",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Pope_Francis_Korea_Haemi_Castle_19_%284x5_cropped%29.jpg/330px-Pope_Francis_Korea_Haemi_Castle_19_%284x5_cropped%29.jpg"
+  },
+  {
+    "name": "리드 헤이스팅스",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Re_publica_2015_-_Tag_1_%2817381870955%29_%28cropped%29.jpg/330px-Re_publica_2015_-_Tag_1_%2817381870955%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "밥 아이거",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Bob_Iger_2019_Disney_Legends_Awards_Ceremony_D23_EXPO_2019_%2851441457900%29_%28cropped%29.jpg/330px-Bob_Iger_2019_Disney_Legends_Awards_Ceremony_D23_EXPO_2019_%2851441457900%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "하워드 슐츠",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Howard_Schultz_by_Gage_Skidmore.jpg/330px-Howard_Schultz_by_Gage_Skidmore.jpg"
+  },
+  {
+    "name": "필 나이트",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Phil_Knight_with_Tom_Matthyssens_in_Universal_Studios_Orlando_1999_%28cropped%29.jpg/330px-Phil_Knight_with_Tom_Matthyssens_in_Universal_Studios_Orlando_1999_%28cropped%29.jpg"
+  },
+  {
+    "name": "베르나르 아르노",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Bernard_Arnault_%283%29_-_2017_%28cropped%29.jpg/330px-Bernard_Arnault_%283%29_-_2017_%28cropped%29.jpg"
+  },
+  {
+    "name": "아만시오 오르테가",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Coat_of_Arms_of_Amancio_Ortega.svg/330px-Coat_of_Arms_of_Amancio_Ortega.svg.png"
+  },
+  {
+    "name": "브라이언 체스키",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Brian_Chesky_2025.jpg/330px-Brian_Chesky_2025.jpg"
+  },
+  {
+    "name": "트래비스 캘러닉",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/The_CEO%2C_UBER%2C_Mr._Travis_Kalanick_meeting_the_Union_Minister_for_Electronics_%26_Information_Technology_and_Law_%26_Justice%2C_Shri_Ravi_Shankar_Prasad%2C_in_New_Delhi_on_December_15%2C_2016_%28cropped%29.jpg/330px-thumbnail.jpg"
+  },
+  {
+    "name": "다니엘 엑",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Daniel_Ek_EC_2025_%28cropped%29.jpg/330px-Daniel_Ek_EC_2025_%28cropped%29.jpg"
+  },
+  {
+    "name": "앤디 재시",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Andy_Jassy.jpg/330px-Andy_Jassy.jpg"
+  },
+  {
+    "name": "마크 큐번",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/P20260518JB-0644_%283x4_cropped_on_Cuban%29.jpg/330px-P20260518JB-0644_%283x4_cropped_on_Cuban%29.jpg"
+  },
+  {
+    "name": "조지 소로스",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/George_Soros%2C_Founder_and_Chairman_of_the_Open_Society_Foundations%2C_visits_the_EC_%283x4_cropped%29.jpg/330px-George_Soros%2C_Founder_and_Chairman_of_the_Open_Society_Foundations%2C_visits_the_EC_%283x4_cropped%29.jpg"
+  },
+  {
+    "name": "세종대왕",
+    "image": "https://upload.wikimedia.org/wikipedia/en/7/75/King_Sejong_the_Great_-_Government_Standard_Portrait.jpg"
+  },
+  {
+    "name": "빌 클린턴",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Bill_Clinton_%28cropped_4%29.jpg/330px-Bill_Clinton_%28cropped_4%29.jpg"
+  },
+  {
+    "name": "지미 카터",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Jimmy_Carter_Official_Portrait2_%283x4_cropped%29.jpg/330px-Jimmy_Carter_Official_Portrait2_%283x4_cropped%29.jpg"
+  },
+  {
+    "name": "멕 휘트먼",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Meg_Whitman%2C_U.S._Ambassador.jpg/330px-Meg_Whitman%2C_U.S._Ambassador.jpg"
+  },
+  {
+    "name": "셰릴 샌드버그",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Sheryl_Sandberg_WEF_2013_%28crop_by_James_Tamim%29.jpg/330px-Sheryl_Sandberg_WEF_2013_%28crop_by_James_Tamim%29.jpg"
+  },
+  {
+    "name": "제이미 다이먼",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Chancellor_Rachel_Reeves_meets_Jamie_Dimon_%2854838700663%29_%28cropped%29_%28cropped%29.jpg/330px-Chancellor_Rachel_Reeves_meets_Jamie_Dimon_%2854838700663%29_%28cropped%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "루퍼트 머독",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Rupert_Murdoch_-_Flickr_-_Eva_Rinaldi_Celebrity_and_Live_Music_Photographer.jpg/330px-Rupert_Murdoch_-_Flickr_-_Eva_Rinaldi_Celebrity_and_Live_Music_Photographer.jpg"
+  },
+  {
+    "name": "라탄 타타",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Shri_Ratan_Naval_Tata.jpg/330px-Shri_Ratan_Naval_Tata.jpg"
+  },
+  {
+    "name": "정주영",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Chung_Ju-yung_%28Cropped%29.jpg/330px-Chung_Ju-yung_%28Cropped%29.jpg"
+  },
+  {
+    "name": "이건희",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Lee_Kun-Hee.jpg/330px-Lee_Kun-Hee.jpg"
+  },
+  {
+    "name": "김범수",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/7/75/Kim_Bum-soo%2C_Chairman_of_board%2C_Kakao_Inc.jpg"
+  },
+  {
+    "name": "호찌민",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Ho_Chi_Minh_-_1946_Portrait_%28cropped%29.jpg/330px-Ho_Chi_Minh_-_1946_Portrait_%28cropped%29.jpg"
+  },
+  {
+    "name": "체 게바라",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Che_Guevara_-_Guerrillero_Heroico_by_Alberto_Korda.jpg/330px-Che_Guevara_-_Guerrillero_Heroico_by_Alberto_Korda.jpg"
+  },
+  {
+    "name": "카멀라 해리스",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Kamala_Harris_Vice_Presidential_Portrait.jpg/330px-Kamala_Harris_Vice_Presidential_Portrait.jpg"
+  },
+  {
+    "name": "미셸 오바마",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Michelle_Obama_2013_official_portrait.jpg/330px-Michelle_Obama_2013_official_portrait.jpg"
+  },
+  {
+    "name": "나렌드라 모디",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/The_official_portrait_of_Shri_Narendra_Modi%2C_the_Prime_Minister_of_the_Republic_of_India.jpg/330px-The_official_portrait_of_Shri_Narendra_Modi%2C_the_Prime_Minister_of_the_Republic_of_India.jpg"
+  },
+  {
+    "name": "자이르 보우소나루",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Jair_Bolsonaro_em_24_de_abril_de_2019_%281%29_%28cropped%29.jpg/330px-Jair_Bolsonaro_em_24_de_abril_de_2019_%281%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "자신다 아던",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/New_Zealand_Prime_Minister_Jacinda_Ardern_in_2018.jpg/330px-New_Zealand_Prime_Minister_Jacinda_Ardern_in_2018.jpg"
+  },
+  {
+    "name": "요시히데 스가",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Yoshihide_Suga_20200924.jpg/330px-Yoshihide_Suga_20200924.jpg"
+  },
+  {
+    "name": "기시다 후미오",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Fumio_Kishida_20211005_%28cropped%29.jpg/330px-Fumio_Kishida_20211005_%28cropped%29.jpg"
+  },
+  {
+    "name": "기시 노부스케",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Nobusuke_Kishi_portrait_%28cropped%29%282%29.jpg/330px-Nobusuke_Kishi_portrait_%28cropped%29%282%29.jpg"
+  },
+  {
+    "name": "아돌프 히틀러",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Hitler_portrait_crop_%28cropped%29%282%29.jpg/330px-Hitler_portrait_crop_%28cropped%29%282%29.jpg"
+  },
+  {
+    "name": "스티브 발머",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Steve_ballmer_2007_outdoors2-2.jpg/960px-Steve_ballmer_2007_outdoors2-2.jpg"
   }
 ]
