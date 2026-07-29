@@ -348,6 +348,10 @@ h1 {
   padding: 0 14px;
 }
 
+.compact-field {
+  max-width: 220px;
+}
+
 .quiet-name-field {
   margin: 0 auto;
   max-width: 420px;

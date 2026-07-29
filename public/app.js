@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseEnabled } from "./firebase-config.js";
-import { games, packs } from "./game-data.js?v=32";
+import { games, packs } from "./game-data.js?v=33";
 
 const isHost = document.body.classList.contains("host");
 const hostRoot = document.querySelector("#hostRoot");
@@ -15,7 +15,7 @@ const room = params.get("room") || "family";
 const shouldResetRoom = params.get("reset") === "1";
 if (roomLabel) roomLabel.textContent = `방: ${room}`;
 
-const APP_VERSION = 32;
+const APP_VERSION = 33;
 const hiddenGames = new Set(["quiet", "song"]);
 let firebase = {};
 let roomRef = null;
@@ -650,7 +650,8 @@ async function resetRoom() {
 }
 
 function buildTeams(count = 2, existing = []) {
-  return Array.from({ length: count }, (_, index) => ({
+  const safeCount = Math.min(20, Math.max(1, Number(count || 2)));
+  return Array.from({ length: safeCount }, (_, index) => ({
     name: existing[index]?.name || `${String.fromCharCode(65 + index)}팀`,
     score: Number(existing[index]?.score || 0),
   }));
@@ -667,10 +668,11 @@ async function setPlayMode(mode) {
 
 async function setTeamCount(count) {
   playEffect("select");
+  const safeCount = Math.min(20, Math.max(1, Number(count || 2)));
   await saveState({
     playMode: "team",
-    teamCount: count,
-    teams: buildTeams(count, currentState.teams),
+    teamCount: safeCount,
+    teams: buildTeams(safeCount, currentState.teams),
   });
 }
 
@@ -1349,31 +1351,33 @@ function renderTeamSetup(state) {
   const teams = buildTeams(state.teamCount || 2, state.teams);
   return `
     <section class="notice-panel team-panel">
-      <p class="label">운영 방식</p>
-      <div class="chip-row">
-        <button type="button" class="chip ${state.playMode === "team" ? "active" : ""}" data-action="mode:team">팀전</button>
-        <button type="button" class="chip ${state.playMode === "solo" ? "active" : ""}" data-action="mode:solo">개인전</button>
+      <div class="setup-head">
+        <div>
+          <p class="label">팀 설정</p>
+          <h1>팀을 정해주세요</h1>
+        </div>
       </div>
-      ${
-        state.playMode === "team"
-          ? `<div class="chip-row">
-              <button type="button" class="chip ${state.teamCount === 2 ? "active" : ""}" data-action="teamCount:2">2팀</button>
-              <button type="button" class="chip ${state.teamCount === 3 ? "active" : ""}" data-action="teamCount:3">3팀</button>
-            </div>
-            <div class="team-name-grid">
-              ${teams
-                .map(
-                  (team, index) => `
-                    <label class="field">
-                      <span>${index + 1}팀 이름</span>
-                      <input id="teamName-${index}" type="text" maxlength="12" value="${escapeHtml(team.name)}" />
-                    </label>
-                  `,
-                )
-                .join("")}
-            </div>`
-          : `<p class="helper-text">개인전에서는 팀 점수판을 숨깁니다. 골든벨은 항상 개인전으로 진행됩니다.</p>`
-      }
+      <label class="field compact-field">
+        <span>팀 개수</span>
+        <input id="teamCountInput" type="number" min="1" max="20" step="1" value="${teams.length}" />
+      </label>
+      <div class="chip-row">
+        ${[2, 3, 4, 5, 6, 8, 10]
+          .map((count) => `<button type="button" class="chip ${teams.length === count ? "active" : ""}" data-action="teamCount:${count}">${count}팀</button>`)
+          .join("")}
+      </div>
+      <div class="team-name-grid">
+        ${teams
+          .map(
+            (team, index) => `
+              <label class="field">
+                <span>${index + 1}팀 이름</span>
+                <input id="teamName-${index}" type="text" maxlength="12" value="${escapeHtml(team.name)}" />
+              </label>
+            `,
+          )
+          .join("")}
+      </div>
     </section>
   `;
 }
@@ -1622,6 +1626,7 @@ function renderHost() {
 
   if (state.view === "menu") {
     hostRoot.innerHTML = `
+      ${renderTeamSetup(state)}
       ${renderScoreboard(state, false)}
       <section class="notice-panel">
         <p class="label">게임 선택 대기</p>
@@ -2485,6 +2490,13 @@ function bindActions(root) {
     if (event.target.id === "questionLimitInput") {
       currentState.questionLimit = Number(event.target.value || 10);
     }
+    if (event.target.id === "teamCountInput") {
+      const count = Math.min(20, Math.max(1, Number(event.target.value || 2)));
+      currentState.playMode = "team";
+      currentState.teamCount = count;
+      currentState.teams = buildTeams(count, currentState.teams);
+      saveState({ playMode: "team", teamCount: count, teams: currentState.teams });
+    }
     if (event.target.id?.startsWith("teamName-")) {
       const index = Number(event.target.id.slice("teamName-".length));
       const teams = buildTeams(currentState.teamCount || 2, currentState.teams);
@@ -2506,6 +2518,7 @@ function bindActions(root) {
     const action = target.dataset.action;
     if (action.startsWith("game:")) return chooseGame(action.slice(5));
     if (action.startsWith("category:")) return chooseCategory(action.slice(9));
+    if (action.startsWith("teamCount:")) return setTeamCount(Number(action.slice(10)));
     if (action.startsWith("teamScore:")) {
       const [, index, amount] = action.split(":");
       return awardTeam(Number(index), Number(amount || 1));
